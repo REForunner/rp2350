@@ -38,9 +38,10 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(rp2350 rp2350.c )
+add_executable(rp2350 main/rp2350.c )
 
 # add subdirectory.
+add_subdirectory(main)                      # main
 add_subdirectory(components/sparkfun_pico)  # psram
 add_subdirectory(components/freertos)       # operation system
 add_subdirectory(components/log.c)          # log
@@ -56,6 +57,7 @@ pico_enable_stdio_usb(rp2350 0)
 # Add the standard library to the build
 target_link_libraries(rp2350
         pico_stdlib
+        main            # main library
         sparkfun_pico   # psram
         freertos        # freertos-kernel
         log             # log.c

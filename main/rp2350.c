@@ -1,37 +1,9 @@
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include <stdlib.h>
-#include <memory.h>
-#include <ctype.h>
-#include "hardware/clocks.h"
-#include "hardware/gpio.h"
-#include "hardware/structs/qmi.h"
-#include "sfe_psram.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "log.h"
-#include "hardware/dma.h"
-#include "bsp.h"
+#include "rp2350.h"
 
 // psram
 #define PSRAM_BASE      (0x11000000u)           // psram address base
 #define PSRAM_SIZE      (8 * 1024 * 1024)       // psram size (byte)
 #define PSRAM_CSI_PIN   19                      // psram chip select pin
-
-void mainTask(void* param) {
-    while (true) {
-        printf("Hello from FreeRTOS task!\n");
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
-
-void mainTask2(void * param)
-{
-    while (true) {
-        printf("Hello, world!\n");
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
 
 UartHandler_t * uHandler = NULL;
 
@@ -42,20 +14,27 @@ int main()
 
     // Initialise PSRAM and get the psram size
     size_t psram_size = sfe_setup_psram(PSRAM_CSI_PIN);
-
-    printf("start!\n");
+    
+    // initialise uart and used dma
     uHandler = (UartHandler_t *)pvPortCalloc(1, sizeof(UartHandler_t));
     if(uHandler != NULL)
     {
-        uHandler->uart = uart0;
-        uHandler->baudrate = 115200U;
-        
-        vbspUartInitWithDMA(0, 1, uHandler);
+        uHandler->uart = UART_CUSTOM;
+        uHandler->baudrate = UART_BAUDRATE;
+        uHandler->TXdmaCb = (irq_handler_t)virqTXDMAServe;
+        uHandler->RXdmaCb = (irq_handler_t)virqRXDMAServe;
+        uHandler->uartCb = (irq_handler_t)virqUartServe;
+
+        vbspUartInitWithDMA(UART_TX_GPIO, UART_RX_GPIO, uHandler);
     }
     else
     {
         printf("calloc error.\n");
     }
+
+    static char h[] = "hello world!!!";
+    vbspUartTransferWithDMA((const uint8_t *)h, sizeof(h), uHandler);
+    while(1) sleep_ms(1000);
     // // Launch main task
     // xTaskCreate(
     //     /*pxTaskCode*/    mainTask, 
