@@ -2,6 +2,7 @@
 #define IRQ_H_
 
 #include "bsp.h"
+#include <stdlib.h>
 
 extern UartHandler_t * uHandler;
 

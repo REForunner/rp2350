@@ -10,6 +10,8 @@
 // dma irq priority
 #define UART_RX_DMA_PRIORITY        PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY
 #define UART_TX_DMA_PRIORITY        PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY
+// tigger self
+#define DMA_TIGGER_SELF             0x10000000U
 
 /// @brief Initialise a UART with DMA(tx and rx).
 /// @param tx : the GPIO number of tx.
@@ -22,7 +24,7 @@ void vbspUartInitWithDMA(uint tx, uint rx, UartHandler_t * px)
         panic("Invalid UART configuration parameters!!!");
     if(NUM_BANK0_GPIOS <= tx || NUM_BANK0_GPIOS  <= rx )
         panic("Invalid GPIO number for UART!!!");
-
+    
     px->irq_num = (uint)UART_DMA_IRQ_NUM;
     // Initialise a UART and return the Actual configured baud rate
     // Set the TX and RX pins by using the function select on the GPIO
@@ -59,6 +61,8 @@ void vbspUartInitWithDMA(uint tx, uint rx, UartHandler_t * px)
                                 UART_UARTIMSC_PEIM_BITS |   // parity error
                                 UART_UARTIMSC_BEIM_BITS |   // line break(if rx always low, it will be tiggered!!!)
                                 UART_UARTIMSC_OEIM_BITS;    // overrun error
+    // Disable FIFO for immediate DREQ and atomic DMA transfers
+    uart_set_fifo_enabled(px->uart, false);
     // Configure the processor to run call-back when UART_IRQ0 is asserted
     irq_set_exclusive_handler(UART_IRQ_NUM(px->uart), px->uartCb);
     
@@ -68,6 +72,7 @@ void vbspUartInitWithDMA(uint tx, uint rx, UartHandler_t * px)
     // enable uart0 interrupt on current core(executing this program core)
     // And other core isn't open this interrupt!!!
     irq_set_enabled(UART_IRQ_NUM(px->uart), true);
+    uart_set_irqs_enabled(px->uart, true, false);
 
     // Get a free channel for tx, panic() if there are none
     px->TxChannel = dma_claim_unused_channel(true);
@@ -105,27 +110,30 @@ void vbspUartInitWithDMA(uint tx, uint rx, UartHandler_t * px)
         
         Note:
             1. ring_size must be equal to buffer size
-            2. number of transfers once represents the percentage of usage( the once is (100/UART_RXBUFF_BLOCK_NUM)% )
+            2. number of transfers once represents the percentage of usage( the once is (100/px->bufferBlocks)% )
                 (Only related to DMA writes!!!)
+            3. the write address must be adjust to 2^n!!!
     */
-
     // check buffer size, it must be equal to 2^n(max 32KB)
-    int n = lUtilCheckAndFindOneLocal(UART_RX_BUFFER_BYTES_ALL_BLOCK);
-    if(n == -1 || UART_RX_BUFFER_BYTES_ALL_BLOCK > UART_BUFFER_BYTES_MAX || (UART_RX_BUFFER_BYTES_ALL_BLOCK % 2 != 0U))
+    int n = lUtilCheckAndFindOneLocal(px->bufferSize);
+    if(n == -1 || px->bufferSize > UART_BUFFER_BYTES_MAX || (px->bufferSize % 2 != 0U))
     {
         panic("Invaild buffersize! it must be equal to 2^n. And the buffer size max is 32768 Bytes!!!");
     }
     channel_config_set_read_increment(&RxC, false);
-    channel_config_set_write_increment(&RxC, true);    
-    channel_config_set_ring(&RxC, true, (uint)n); // 1 << n byte boundary on write ptr
+    channel_config_set_write_increment(&RxC, true);
+    channel_config_set_ring(&RxC, true, (uint)n - 1U); // 1 << n byte boundary on write ptr
+    // update ring buffer read and write poiner
+    px->pRXr = px->pucBuffer;
+    px->pRXw = px->pucBuffer;
     // config channel
     dma_channel_configure(
             px->RxChannel,              // Channel to be configured
-            &TxC,                       // The configuration
+            &RxC,                       // The configuration
             px->pucBuffer,              // The initial write address
             &uart_get_hw(px->uart)->dr, // read address
-            UART_RX_BUFFER_BYTES_ALL_BLOCK / UART_RXBUFF_BLOCK_NUM,   // Number of transfers once
-            true                        // Start immediately.
+            DMA_TIGGER_SELF | (px->bufferSize / px->bufferBlocks),   // Number of receive once, when receive complete, tigger self.
+            true                       // Start immediately.
         );
     // add rx dma irq serve
     irq_add_shared_handler(px->irq_num, px->RXdmaCb, UART_RX_DMA_PRIORITY);

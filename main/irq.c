@@ -4,7 +4,44 @@
 /// @param void 
 void virqUartServe(void)
 {
-    //
+    // receive timeout interrupt status
+    if(uart_get_hw(uHandler->uart)->mis & UART_UARTMIS_RTMIS_BITS)
+    {
+        // clear interrupt flag
+        uart_get_hw(uHandler->uart)->icr ^= UART_UARTMIS_RTMIS_BITS;
+        // compare receive size of the once dma
+        uint rxSizeOnce = uHandler->bufferSize / uHandler->bufferBlocks;    
+        // update write pointer
+        uHandler->pRXw += (rxSizeOnce - dma_hw->ch[uHandler->RxChannel].transfer_count);
+        // check write pointer validity
+        if(uHandler->pRXw > (uHandler->pucBuffer + uHandler->bufferSize))
+            panic("Illegal pointer writing of the RX ring buffer from RX UART Interrupt!!!");
+        // address reset
+        if(uHandler->pRXw == (uHandler->pucBuffer + uHandler->bufferSize))
+            uHandler->pRXw > uHandler->pucBuffer;
+        
+        // is the ring buffer almost full???
+        if((int)abs(uHandler->pRXr - uHandler->pRXw) < rxSizeOnce)
+        {
+            // the ring buffer is almost full!!!
+
+        }
+
+        // There are currently no data to receive. do some deal with
+
+    }
+    // error occured
+    if(uart_get_hw(uHandler->uart)->mis & UART_UARTMIS_FEMIS_BITS ||    // framing error
+        uart_get_hw(uHandler->uart)->mis & UART_UARTMIS_PEMIS_BITS ||   // parity error
+        uart_get_hw(uHandler->uart)->mis & UART_UARTMIS_BEMIS_BITS ||   // break error
+        uart_get_hw(uHandler->uart)->mis & UART_UARTMIS_OEMIS_BITS)     // overrun error
+    {
+        // clear interrupt flag
+        uart_get_hw(uHandler->uart)->icr ^= (UART_UARTMIS_FEMIS_BITS | UART_UARTMIS_PEMIS_BITS | 
+                                                UART_UARTMIS_BEMIS_BITS | UART_UARTMIS_OEMIS_BITS);
+        
+        panic("UART TX error was happened!!!");
+    }
 }
 
 /// @brief UART TX dma Interrupt service
@@ -25,13 +62,14 @@ void virqTXDMAServe(void)
         panic("Read or Write error has occured from UART TX DMA Channel!!!");
 
     // tx dma transmit complete
+    static int ll;
+    ll += 1;
     
-
     // Clear the interrupt request.
     if(DMA_IRQ_0 == uHandler->irq_num)
-        dma_hw->ints0 = 1u << uHandler->TxChannel;
+        dma_hw->ints0 |= 1u << uHandler->TxChannel;
     if(DMA_IRQ_1 == uHandler->irq_num)
-        dma_hw->ints1 = 1u << uHandler->TxChannel;
+        dma_hw->ints1 |= 1u << uHandler->TxChannel;
 }
 
 /// @brief UART RX dma Interrupt service
@@ -48,15 +86,32 @@ void virqRXDMAServe(void)
         return;
     
     // check error occur?
-    if(dma_channel_hw_addr(uHandler->RxChannel)->ctrl_trig & 0x80000000U)
+    if(dma_channel_hw_addr(uHandler->RxChannel)->ctrl_trig & 0x80000000U)   // ahb_error
         panic("Read or Write error has occured from UART RX DMA Channel!!!");
     
-    // rx dma receives 1/UART_RXBUFF_BLOCK_NUM of buffer size datas.
-    // no deal with!!!
+    // rx dma receives 1/uHandler->bufferBlocks of buffer size datas.
+    // compare receive size of the once dma
+    int rxSizeOnce = uHandler->bufferSize / uHandler->bufferBlocks;
+    // inc write pointer
+    // Each time an interrupt is triggered, pRXw must be an integer multiple of rxSizeOnce.
+    uHandler->pRXw = (char *)(((int)uHandler->pRXw + rxSizeOnce) & ~(rxSizeOnce - 1));
+    // check write pointer validity
+    if(uHandler->pRXw > (uHandler->pucBuffer + uHandler->bufferSize))
+        panic("Illegal pointer writing of the RX ring buffer from RX DMA Interrupt!!!");
+    // address reset
+    if(uHandler->pRXw == (uHandler->pucBuffer + uHandler->bufferSize))
+        uHandler->pRXw > uHandler->pucBuffer;
+    
+    // is the ring buffer almost full???
+    if((int)abs(uHandler->pRXr - uHandler->pRXw) < rxSizeOnce)
+    {
+        // the ring buffer is almost full!!!
+
+    }
 
     // Clear the interrupt request.
     if(DMA_IRQ_0 == uHandler->irq_num)
-        dma_hw->ints0 = 1u << uHandler->RxChannel;
+        dma_hw->ints0 |= 1u << uHandler->RxChannel;
     if(DMA_IRQ_1 == uHandler->irq_num)
-        dma_hw->ints1 = 1u << uHandler->RxChannel;
+        dma_hw->ints1 |= 1u << uHandler->RxChannel;
 }

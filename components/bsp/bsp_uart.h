@@ -11,10 +11,6 @@
 #define UART_IRQ_PRIORITY               5U
 // dma uart channel irq priority
 #define UART_DMA_CHANNEL_IRQ_PRIORITY   6U
-// receive buffer size
-#define UART_RX_BUFFER_BYTES_ALL_BLOCK  2048U
-// How many times must it be received to fill the buffer used DMA
-#define UART_RXBUFF_BLOCK_NUM           2U
 
 typedef struct UartHandler_t
 {
@@ -28,7 +24,11 @@ typedef struct UartHandler_t
     irq_handler_t TXdmaCb;  ///> Interrupt service function of DMA(uart tx).
     irq_handler_t RXdmaCb;  ///> Interrupt service function of DMA(uart rx).
     irq_handler_t uartCb;   ///> Interrupt service function of UART.
-    uint8_t pucBuffer[UART_RX_BUFFER_BYTES_ALL_BLOCK];       ///> receive buffer.
+    uint bufferSize;        ///> size of all block
+    uint bufferBlocks;      ///> block counts
+    char * pucBuffer;    ///> pointer of receive buffer.
+    char * pRXr;         ///> read pointer of ring buffer.
+    char * pRXw;         ///> write pointer of ring buffer.
 } UartHandler_t;
 
 /// @brief Initialise a UART with DMA(tx and rx).

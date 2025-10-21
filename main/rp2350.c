@@ -1,10 +1,5 @@
 #include "rp2350.h"
 
-// psram
-#define PSRAM_BASE      (0x11000000u)           // psram address base
-#define PSRAM_SIZE      (8 * 1024 * 1024)       // psram size (byte)
-#define PSRAM_CSI_PIN   19                      // psram chip select pin
-
 UartHandler_t * uHandler = NULL;
 
 // entry
@@ -24,16 +19,20 @@ int main()
         uHandler->TXdmaCb = (irq_handler_t)virqTXDMAServe;
         uHandler->RXdmaCb = (irq_handler_t)virqRXDMAServe;
         uHandler->uartCb = (irq_handler_t)virqUartServe;
+        // must init psram first.
+        uHandler->pucBuffer = (uint8_t *)UART_RX_BUFFER_BASE;
+        uHandler->bufferSize = (uint)UART_RX_BUFFER_BYTES_ALL_BLOCK;
+        uHandler->bufferBlocks = (uint)UART_RXBUFF_BLOCK_NUM;
 
         vbspUartInitWithDMA(UART_TX_GPIO, UART_RX_GPIO, uHandler);
     }
     else
     {
-        printf("calloc error.\n");
+        panic("calloc error.");
     }
-
+    
     static char h[] = "hello world!!!";
-    vbspUartTransferWithDMA((const uint8_t *)h, sizeof(h), uHandler);
+    // vbspUartTransferWithDMA((const uint8_t *)h, sizeof(h), uHandler);
     while(1) sleep_ms(1000);
     // // Launch main task
     // xTaskCreate(
