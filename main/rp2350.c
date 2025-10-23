@@ -31,9 +31,16 @@ int main()
         panic("calloc error.");
     }
     
-    static char h[] = "hello world!!!";
-    // vbspUartTransferWithDMA((const uint8_t *)h, sizeof(h), uHandler);
-    while(1) sleep_ms(1000);
+    while(true) 
+    {
+        sleep_ms(1000);
+        if(uHandler->usefulBuf != 0)
+        {
+            vbspUartTransferWithDMA((const uint8_t *)uHandler->pRXr, uHandler->usefulBuf, uHandler);
+            uHandler->pRXr += uHandler->usefulBuf;
+            uHandler->usefulBuf = 0;
+        }
+    }
     // // Launch main task
     // xTaskCreate(
     //     /*pxTaskCode*/    mainTask, 

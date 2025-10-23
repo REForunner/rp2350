@@ -11,7 +11,7 @@
 #define UART_RX_DMA_PRIORITY        PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY
 #define UART_TX_DMA_PRIORITY        PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY
 // tigger self
-#define DMA_TIGGER_SELF             0x10000000U
+#define DMA_TIGGER_SELF             (DMA_CH0_TRANS_COUNT_MODE_VALUE_TRIGGER_SELF << DMA_CH0_TRANS_COUNT_MODE_LSB)
 
 /// @brief Initialise a UART with DMA(tx and rx).
 /// @param tx : the GPIO number of tx.
@@ -56,24 +56,24 @@ void vbspUartInitWithDMA(uint tx, uint rx, UartHandler_t * px)
     // it must be done after the call "uart_init", Otherwise, it will overwrite.
     uart_get_hw(px->uart)->dmacr |= UART_UARTDMACR_DMAONERR_BITS;
     // interrupt enable of all error and RTIM(receive timeout)
-    uart_get_hw(px->uart)->imsc = UART_UARTIMSC_RTIM_BITS | // receive time(line ilde)
-                                UART_UARTIMSC_FEIM_BITS |   // framing error
-                                UART_UARTIMSC_PEIM_BITS |   // parity error
-                                UART_UARTIMSC_BEIM_BITS |   // line break(if rx always low, it will be tiggered!!!)
-                                UART_UARTIMSC_OEIM_BITS;    // overrun error
+    // Note: if use dma, the RXIM Will hardly trigger!!!
+    uart_get_hw(px->uart)->imsc |= /* UART_UARTIMSC_RTIM_BITS |    // receive time(line ilde) */
+                                    UART_UARTIMSC_FEIM_BITS |   // framing error
+                                    UART_UARTIMSC_PEIM_BITS |   // parity error
+                                    UART_UARTIMSC_BEIM_BITS |   // line break(if rx always low, it will be tiggered!!!)
+                                    UART_UARTIMSC_OEIM_BITS;    // overrun error
     // Disable FIFO for immediate DREQ and atomic DMA transfers
-    uart_set_fifo_enabled(px->uart, false);
+    uart_set_fifo_enabled(px->uart, true);
     // Configure the processor to run call-back when UART_IRQ0 is asserted
     irq_set_exclusive_handler(UART_IRQ_NUM(px->uart), px->uartCb);
-    
+
     // Set specified interrupt’s priority.
     // irq_set_priority(UART_IRQ_NUM(px->uart), UART_IRQ_PRIORITY);
     
     // enable uart0 interrupt on current core(executing this program core)
     // And other core isn't open this interrupt!!!
     irq_set_enabled(UART_IRQ_NUM(px->uart), true);
-    uart_set_irqs_enabled(px->uart, true, false);
-
+    
     // Get a free channel for tx, panic() if there are none
     px->TxChannel = dma_claim_unused_channel(true);
     // Configure dma channel for uart tx
@@ -126,6 +126,7 @@ void vbspUartInitWithDMA(uint tx, uint rx, UartHandler_t * px)
     // update ring buffer read and write poiner
     px->pRXr = px->pucBuffer;
     px->pRXw = px->pucBuffer;
+    px->usefulBuf = 0U;
     // config channel
     dma_channel_configure(
             px->RxChannel,              // Channel to be configured

@@ -49,6 +49,7 @@
         "freertos.h": "c",
         "ctype.h": "c",
         "irq.h": "c",
-        "bsp_uart.h": "c"
+        "bsp_uart.h": "c",
+        "rp2350.h": "c"
     }
 }

@@ -26,9 +26,10 @@ typedef struct UartHandler_t
     irq_handler_t uartCb;   ///> Interrupt service function of UART.
     uint bufferSize;        ///> size of all block
     uint bufferBlocks;      ///> block counts
-    char * pucBuffer;    ///> pointer of receive buffer.
-    char * pRXr;         ///> read pointer of ring buffer.
-    char * pRXw;         ///> write pointer of ring buffer.
+    char * pucBuffer;       ///> pointer of receive buffer.
+    char * pRXr;            ///> read pointer of ring buffer.
+    char * pRXw;            ///> write pointer of ring buffer.
+    uint usefulBuf;         ///> be useful of ring buffer.
 } UartHandler_t;
 
 /// @brief Initialise a UART with DMA(tx and rx).
