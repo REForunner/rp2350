@@ -3,7 +3,6 @@
 
 #include "pico/stdlib.h"
 #include "util.h"
-#include "bsp_uart.h"
 #include "psram.h"
 
 #endif /* bsp_H_ */

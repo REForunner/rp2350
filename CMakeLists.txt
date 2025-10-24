@@ -38,7 +38,14 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(rp2350 main/rp2350.c )
+add_executable(rp2350 main/rp2350.cpp )
+
+# set uart parameter
+# Optional: Configure driver parameters before adding subdirectory
+set(UART_RX_MAX_BAUDRATE 921600)       # Max baudrate (default: 921600)
+set(UART_DMA_RING_BITS 13)             # DMA buffer size 2^13=8192 bytes (default: 11)
+set(UART_RX_MAX_EVT_DATA_SIZE 512)     # Max event data size (default: 256)
+set(UART_TX_BUFFER_SIZE 1024)          # TX buffer size (default: 256)
 
 # add subdirectory.
 add_subdirectory(main)                      # main
@@ -46,6 +53,7 @@ add_subdirectory(components/sparkfun_pico)  # psram
 add_subdirectory(components/freertos)       # operation system
 add_subdirectory(components/log.c)          # log
 add_subdirectory(components/bsp)            # board support package
+add_subdirectory(lib/UartDmaDriver)         # UartDmaDriver
 
 pico_set_program_name(rp2350 "rp2350")
 pico_set_program_version(rp2350 "0.1")
@@ -62,6 +70,7 @@ target_link_libraries(rp2350
         freertos        # freertos-kernel
         log             # log.c
         bsp             # board support package
+        UartDmaDriver   # UartDmaDriver
         )
 
 # Add the standard include files to the build

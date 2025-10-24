@@ -1,3 +1,6 @@
 [submodule "lib/FreeRTOS-Kernel"]
 	path = lib/FreeRTOS-Kernel
 	url = https://github.com/raspberrypi/FreeRTOS-Kernel.git
+[submodule "lib/pico-freertos-UartDmaDriver"]
+	path = lib/UartDmaDriver
+	url = https://github.com/pierrejay/pico-freertos-UartDmaDriver.git
