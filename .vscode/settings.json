@@ -50,6 +50,7 @@
         "ctype.h": "c",
         "irq.h": "c",
         "bsp_uart.h": "c",
-        "rp2350.h": "c"
+        "rp2350.h": "c",
+        "cstdint": "c"
     }
 }

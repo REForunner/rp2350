@@ -99,6 +99,9 @@
 #define configTIMER_QUEUE_LENGTH                10
 #define configTIMER_TASK_STACK_DEPTH            1024
 
+/* FreeRTOS command line definitions */
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE       4096
+
 /* Interrupt nesting behaviour configuration. */
 /*
 #define configKERNEL_INTERRUPT_PRIORITY         [dependent of processor]

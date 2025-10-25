@@ -19,6 +19,8 @@
 #include "UartDmaDriver.hpp"
 #include <cstdio>
 #include <algorithm>
+#include "pico/unique_id.h"
+#include "FreeRTOS_CLI.h"
 
 // uart hardware config
 #define UART_CUSTOM     uart0

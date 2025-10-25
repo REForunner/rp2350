@@ -14,7 +14,7 @@ endif()
 include(${FREERTOS_KERNEL_PATH}/portable/ThirdParty/GCC/${_freertos_port}/FreeRTOS_Kernel_import.cmake)
 
 # 3. Hooks + new/delete overload
-add_library(freertos STATIC hooks.c)
+add_library(freertos STATIC hooks.c FreeRTOS_CLI.c)
 
 target_include_directories(freertos PUBLIC
         ${CMAKE_CURRENT_LIST_DIR})          # <-- contains FreeRTOSConfig.h

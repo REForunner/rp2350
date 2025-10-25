@@ -89,15 +89,25 @@ void uart_processing_task(void* param) {
 int main(void)
 {
     stdio_init_all();
-
+    
     // Initialise PSRAM and get the psram size
     size_t psram_size = sfe_setup_psram(PSRAM_CSI_PIN);
     
-    printf("Basic UART Example Starting...\n");
+    printf("PSRAM size is 0x%lx.\n", psram_size);
+
+    // get unique id
+    pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
     
-    // Create the UART processing task
-    xTaskCreate(uart_processing_task, "UART", 2048, NULL, 1, NULL);
-    
+    printf("Unique identifier: 0x%llx.\n", *(uint64_t *)&board_id);
+
+    // printf("Basic UART Example Starting...\n");
+    // // Create the UART processing task
+    // xTaskCreate(uart_processing_task, "UART", 2048, NULL, 1, NULL);
+extern void vUARTCommandConsoleStart( uint16_t usStackSize,
+                               UBaseType_t uxPriority );
+    vUARTCommandConsoleStart(1024, 1);
+
     // Start FreeRTOS scheduler
     vTaskStartScheduler();
     
