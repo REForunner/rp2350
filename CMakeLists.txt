@@ -47,12 +47,12 @@ pico_set_program_version(rp2350 "0.1")
 # Optional: Configure driver parameters before adding subdirectory
 set(UART_RX_MAX_BAUDRATE 921600)       # Max baudrate (default: 921600)
 set(UART_DMA_RING_BITS 13)             # DMA buffer size 2^13=8192 bytes (default: 11)
-set(UART_RX_MAX_EVT_DATA_SIZE 512)     # Max event data size (default: 256)
+set(UART_RX_MAX_EVT_DATA_SIZE 1024)    # Max event data size (default: 256)
 set(UART_TX_BUFFER_SIZE 1024)          # TX buffer size (default: 256)
 
 # add subdirectory.
 add_subdirectory(main)                      # main
-add_subdirectory(app)                       # app
+add_subdirectory(app)                       # applocation
 add_subdirectory(components/sparkfun_pico)  # psram
 add_subdirectory(components/freertos)       # operation system
 add_subdirectory(components/log.c)          # log
@@ -67,7 +67,7 @@ pico_enable_stdio_usb(rp2350 0)
 target_link_libraries(rp2350 PRIVATE
         pico_stdlib
         main            # main library
-        app             # app library
+        app             # applocation
         sparkfun_pico   # psram
         freertos        # freertos-kernel
         log             # log.c

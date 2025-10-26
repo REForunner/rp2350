@@ -21,16 +21,12 @@
 #include <algorithm>
 #include "pico/unique_id.h"
 #include "FreeRTOS_CLI.h"
+#include "cli/cli.h"
 
-// uart hardware config
-#define UART_CUSTOM     uart0
-#define UART_TX_GPIO    PICO_DEFAULT_UART_TX_PIN
-#define UART_RX_GPIO    PICO_DEFAULT_UART_RX_PIN
-#define UART_BAUDRATE   115200
-// receive buffer size
-#define UART_RX_BUFFER_BYTES_ALL_BLOCK  0x4000U
-// How many times must it be received to fill the buffer used DMA
-#define UART_RXBUFF_BLOCK_NUM           0x20U
-
+// UART configuration - adapt these for your hardware
+#define UART_CLI            uart0
+#define UART_CLI_TX_PIN     PICO_DEFAULT_UART_TX_PIN
+#define UART_CLI_RX_PIN     PICO_DEFAULT_UART_RX_PIN
+#define UART_CLIBAUD_RATE   115200
 
 #endif /* RP2350_H_ */

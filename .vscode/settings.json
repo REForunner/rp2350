@@ -51,6 +51,7 @@
         "irq.h": "c",
         "bsp_uart.h": "c",
         "rp2350.h": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "algorithm": "cpp"
     }
 }

@@ -28,17 +28,7 @@
  * NOTE:  This file uses a third party USB CDC driver.
  */
 
-/* Standard includes. */
-#include "string.h"
-#include "stdio.h"
-
-/* FreeRTOS includes. */
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
-
-/* Example includes. */
-#include "FreeRTOS_CLI.h"
+#include "cli.h"
 
 /* Dimensions the buffer into which input characters are placed. */
 #define cmdMAX_INPUT_SIZE          50

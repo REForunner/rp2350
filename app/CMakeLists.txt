@@ -1,11 +1,27 @@
-# 子模块：定义一个静态库（也可以是SHARED动态库）
-add_library(app STATIC
-  Sample-CLI-commands.c  # 子模块源文件
-  UARTCommandConsole.c    # 头文件（可选，用于暴露接口）
+add_library(app INTERFACE)
+
+# Collect C/C++ source files in this directory (recursive).
+# Note: provide each glob pattern as a separate argument; combining
+# patterns into a single string is incorrect and doesn't match files.
+file(GLOB_RECURSE SRC_FILES
+	"${CMAKE_CURRENT_LIST_DIR}/*.c"
+	"${CMAKE_CURRENT_LIST_DIR}/*.cpp"
+)
+file(GLOB_RECURSE HEAD_FILES
+	"${CMAKE_CURRENT_LIST_DIR}/*.h"
+	"${CMAKE_CURRENT_LIST_DIR}/*.hpp"
 )
 
-# 可选：指定子模块的头文件路径（方便父项目包含）
-target_include_directories(app
-  PUBLIC  # PUBLIC意味着依赖该库的目标也能访问这些头文件
-  ${CMAKE_CURRENT_LIST_DIR}  # 子模块自身的目录（包含sub_func.h）
-)
+# Add sources/headers to the INTERFACE target only when files exist.
+if(SRC_FILES)
+	target_sources(app INTERFACE ${SRC_FILES})
+endif()
+
+if(HEAD_FILES)
+	# Adding headers to target_sources is optional, but can help IDEs.
+	target_sources(app INTERFACE ${HEAD_FILES})
+endif()
+
+target_include_directories(app INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+
+target_link_libraries(app INTERFACE pico_stdlib)
