@@ -84,7 +84,7 @@
 /* Run time and task stats gathering related definitions. */
 #define configGENERATE_RUN_TIME_STATS           0
 #define configUSE_TRACE_FACILITY                1
-#define configUSE_STATS_FORMATTING_FUNCTIONS    0
+#define configUSE_STATS_FORMATTING_FUNCTIONS    1
 
 /* Possible values are portCLEAN_UP_TCB, portPRE_DELETION_HOOK_TCB. */
 #define configTASK_DELETION_SUPPORT             0

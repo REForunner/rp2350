@@ -4,6 +4,10 @@
 #include "bsp.h"
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief Count the number of 1s
 /// @param n : The unsigned integer to be checked
 /// @return 1's number
@@ -13,5 +17,10 @@ uint ulUtilCountOnesWith32Bits(uint n);
 /// @param n : The unsigned integer to be checked
 /// @return -1 : invaild(the 1 have more the one); other : location of 1
 int lUtilCheckAndFindOneLocal(uint n);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*  UTIL_H_ */

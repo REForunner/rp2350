@@ -21,12 +21,27 @@
 #include <algorithm>
 #include "pico/unique_id.h"
 #include "FreeRTOS_CLI.h"
-#include "cli/cli.h"
+#include "cli/cli.hpp"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // UART configuration - adapt these for your hardware
 #define UART_CLI            uart0
 #define UART_CLI_TX_PIN     PICO_DEFAULT_UART_TX_PIN
 #define UART_CLI_RX_PIN     PICO_DEFAULT_UART_RX_PIN
 #define UART_CLIBAUD_RATE   115200
+
+
+// uid
+extern pico_unique_board_id_t board_id;
+// record psram size
+extern size_t psram_size;
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* RP2350_H_ */
