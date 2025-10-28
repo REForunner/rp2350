@@ -43,15 +43,8 @@ using namespace std;
 
 /*-----------------------------------------------------------*/
 
-/*
- * The task that implements the command console processing.
- */
+/* The task that implements the command console processing. */
 static void prvCommandConsoleTask( void * pvParameters );
-
-/*
- * Implements the task-stats command.
- */
-static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer, size_t xWriteBufferLen, const char * pcCommandString );
 
 /*-----------------------------------------------------------*/
 
@@ -60,18 +53,6 @@ static const char * const pcWelcomeMessage = "FreeRTOS command server.\r\nType H
 static const char * const pcEndOfOutputMessage = "\r\n[Press ENTER to execute the previous command again]\r\n>";
 static const char * const pcNewLine = "\r\n";
 static const char * const pcOverFlow = "The data is overflow. The current command will be ignored.\r\n\r\n>";
-
-/*-----------------------------------------------------------*/
-
-/* Structure that defines the "task-stats" command line command.  This generates
- * a table that gives information on each task in the system. */
-static const CLI_Command_Definition_t xTaskStats =
-{
-    "task-stats",        /* The command string to type. */
-    "\r\ntask-stats:\r\n Displays a table showing the state of each FreeRTOS task\r\n",
-    prvTaskStatsCommand, /* The function to run. */
-    0                    /* No parameters are expected. */
-};
 
 /*-----------------------------------------------------------*/
 
@@ -202,7 +183,8 @@ BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedT
     }
 
     /* Register all the command line commands defined immediately above. */
-    FreeRTOS_CLIRegisterCommand( &xTaskStats );
+    extern void vCommandRegister(void);
+    vCommandRegister();
 
     /* Create that task that handles the console itself. */
     return xTaskCreate( prvCommandConsoleTask,     /* The task that implements the command console. */
@@ -211,48 +193,6 @@ BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedT
                         pvParameters,
                         configTIMER_TASK_PRIORITY - 1,  /* Only one level lower in priority than timer task */
                         pxCreatedTask );
-}
-
-/*-----------------------------------------------------------*/
-
-static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer,
-                                       size_t xWriteBufferLen,
-                                       const char * pcCommandString )
-{
-    const char * const pcHeader = "     State   Priority  Stack    #\r\n************************************************\r\n";
-    BaseType_t xSpacePadding;
-
-    /* Remove compile time warnings about unused parameters, and check the
-     * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
-     * write buffer length is adequate, so does not check for buffer overflows. */
-    ( void ) pcCommandString;
-    ( void ) xWriteBufferLen;
-    configASSERT( pcWriteBuffer );
-
-    /* Generate a table of task stats. */
-    strcpy( pcWriteBuffer, "Task" );
-    pcWriteBuffer += strlen( pcWriteBuffer );
-
-    /* Minus three for the null terminator and half the number of characters in
-     * "Task" so the column lines up with the centre of the heading. */
-    configASSERT( configMAX_TASK_NAME_LEN > 3 );
-
-    for( xSpacePadding = strlen( "Task" ); xSpacePadding < ( configMAX_TASK_NAME_LEN - 3 ); xSpacePadding++ )
-    {
-        /* Add a space to align columns after the task's name. */
-        *pcWriteBuffer = ' ';
-        pcWriteBuffer++;
-
-        /* Ensure always terminated. */
-        *pcWriteBuffer = 0x00;
-    }
-
-    strcpy( pcWriteBuffer, pcHeader );
-    vTaskList( pcWriteBuffer + strlen( pcHeader ) );
-
-    /* There is no more data to return after this single string, so return
-     * pdFALSE. */
-    return pdFALSE;
 }
 
 /*-----------------------------------------------------------*/

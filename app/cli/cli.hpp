@@ -16,7 +16,7 @@
 
 /* Example includes. */
 #include "FreeRTOS_CLI.h"
-
+#include "rp2350.h"
 
 /*-----------------------------------------------------------*/
 
