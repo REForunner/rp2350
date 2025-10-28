@@ -22,6 +22,7 @@
 #include "pico/unique_id.h"
 #include "FreeRTOS_CLI.h"
 #include "cli/cli.hpp"
+#include "serial.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,8 +35,6 @@ extern "C" {
 #define UART_CLIBAUD_RATE   115200
 
 
-// uid
-extern pico_unique_board_id_t board_id;
 // record psram size
 extern size_t psram_size;
 

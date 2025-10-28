@@ -109,6 +109,8 @@
         "cfenv": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "serial.h": "c",
+        "freertos_cli.h": "c"
     }
 }

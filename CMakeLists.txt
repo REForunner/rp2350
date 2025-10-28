@@ -38,7 +38,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(rp2350 main/rp2350.cpp)
+add_executable(rp2350)
 
 pico_set_program_name(rp2350 "rp2350")
 pico_set_program_version(rp2350 "0.1")
@@ -49,6 +49,8 @@ set(UART_RX_MAX_BAUDRATE 921600)       # Max baudrate (default: 921600)
 set(UART_DMA_RING_BITS 13)             # DMA buffer size 2^13=8192 bytes (default: 11)
 set(UART_RX_MAX_EVT_DATA_SIZE 1024)    # Max event data size (default: 256)
 set(UART_TX_BUFFER_SIZE 1024)          # TX buffer size (default: 256)
+# set(UART_WD_TICK_US 450)               # Tick time for DMA watchdog[us] (default: 450)
+# set(UART_WD_SILENCE_TICKS 4)           # The number of ticks to consider silence (default: 4)
 
 # add subdirectory.
 add_subdirectory(main)                      # main
@@ -74,6 +76,8 @@ target_link_libraries(rp2350 PRIVATE
         bsp             # board support package
         UartDmaDriver   # UartDmaDriver
         pico_unique_id  # unique id
+        # tinyusb_device  # tinyusb
+        # tinyusb_board
         )
 
 # Add the standard include files to the build

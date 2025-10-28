@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef FREERTOS_CONFIG_H_
+#define FREERTOS_CONFIG_H_
+
 #include "pico.h"
 #include <stddef.h>
 
@@ -59,7 +63,7 @@
 #define configUSE_TIME_SLICING                  1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
 #define configUSE_TICKLESS_IDLE                 0
-#define configMAX_PRIORITIES                    32
+#define configMAX_PRIORITIES                    16
 #define configIDLE_SHOULD_YIELD                 1
 #define configUSE_TASK_NOTIFICATIONS            1
 #define configTASK_NOTIFICATION_ARRAY_ENTRIES   3
@@ -85,6 +89,8 @@
 #define configGENERATE_RUN_TIME_STATS           0
 #define configUSE_TRACE_FACILITY                1
 #define configUSE_STATS_FORMATTING_FUNCTIONS    1
+#define configINCLUDE_QUERY_HEAP_COMMAND        1
+#define configINCLUDE_TRACE_RELATED_CLI_COMMANDS  1
 
 /* Possible values are portCLEAN_UP_TCB, portPRE_DELETION_HOOK_TCB. */
 #define configTASK_DELETION_SUPPORT             0
@@ -127,7 +133,7 @@
 #define configQUEUE_REGISTRY_SIZE               8
 #define configUSE_QUEUE_SETS                    1
 #define configUSE_NEWLIB_REENTRANT              0
-#define configENABLE_BACKWARD_COMPATIBILITY     0
+#define configENABLE_BACKWARD_COMPATIBILITY     1
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS 5
 
 /* Optional functions - most linkers will remove unused functions anyway. */
@@ -148,3 +154,5 @@
 #define INCLUDE_xTaskAbortDelay                 1
 #define INCLUDE_xTaskGetHandle                  1
 #define INCLUDE_xTaskResumeFromISR              1
+
+#endif  /* FREERTOS_CONFIG_H_ */

@@ -50,8 +50,8 @@ static void prvCommandConsoleTask( void * pvParameters );
 
 /* Const messages output by the command console. */
 static const char * const pcWelcomeMessage = "FreeRTOS command server.\r\nType Help to view a list of registered commands.\r\n\r\n>";
-static const char * const pcEndOfOutputMessage = "\r\n[Press ENTER to execute the previous command again]\r\n>";
-static const char * const pcNewLine = "\r\n";
+static const char * const pcEndOfOutputMessage = "\r\n[Press ENTER to execute the previous command again]\r\n\r\n>";
+static const char * const pcNewLine = "\r\n\r\n";
 static const char * const pcOverFlow = "The data is overflow. The current command will be ignored.\r\n\r\n>";
 
 /*-----------------------------------------------------------*/
@@ -189,7 +189,7 @@ BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedT
     /* Create that task that handles the console itself. */
     return xTaskCreate( prvCommandConsoleTask,     /* The task that implements the command console. */
                         "cli",                     /* Text name assigned to the task.  This is just to assist debugging.  The kernel does not use this name itself. */
-                        3072U,                     /* The size of the stack allocated to the task. */
+                        3072U,                     /* The size of the stack allocated to the task. 3K * 4B = 12K */
                         pvParameters,
                         configTIMER_TASK_PRIORITY - 1,  /* Only one level lower in priority than timer task */
                         pxCreatedTask );

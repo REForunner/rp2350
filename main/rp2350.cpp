@@ -1,7 +1,5 @@
 #include "rp2350.h"
 
-// uid
-pico_unique_board_id_t board_id;
 // record psram size
 size_t psram_size = 0UL;
 // Create driver instance
@@ -21,16 +19,18 @@ static const cli_t xCLIInterface =
 int main(void)
 {
     stdio_init_all();
+
+    // get unique id and format it
+    vSerialInit();
     
     // Initialise PSRAM and get the psram size
     psram_size = sfe_setup_psram(PSRAM_CSI_PIN);
     
-    // get unique id
-    pico_get_unique_board_id(&board_id);
-    
     // Initialise uart0
     vbspUARTInit(&uart_driver); 
     
+    // enable trace recorder
+
     // Create the command line task
     xCLIStart( (void * const)&xCLIInterface, NULL );
     
