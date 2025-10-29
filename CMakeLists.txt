@@ -46,11 +46,11 @@ pico_set_program_version(rp2350 "0.1")
 # set uart parameter
 # Optional: Configure driver parameters before adding subdirectory
 set(UART_RX_MAX_BAUDRATE 921600)       # Max baudrate (default: 921600)
-set(UART_DMA_RING_BITS 13)             # DMA buffer size 2^13=8192 bytes (default: 11)
+set(UART_DMA_RING_BITS 14)             # DMA buffer size 2^13=16384 bytes (default: 11)
 set(UART_RX_MAX_EVT_DATA_SIZE 1024)    # Max event data size (default: 256)
 set(UART_TX_BUFFER_SIZE 1024)          # TX buffer size (default: 256)
-# set(UART_WD_TICK_US 450)               # Tick time for DMA watchdog[us] (default: 450)
-# set(UART_WD_SILENCE_TICKS 4)           # The number of ticks to consider silence (default: 4)
+set(UART_WD_TICK_US 450)               # Tick time for DMA watchdog[us] (default: 450)
+set(UART_WD_SILENCE_TICKS 4)           # The number of ticks to consider silence (default: 4)
 
 # add subdirectory.
 add_subdirectory(main)                      # main

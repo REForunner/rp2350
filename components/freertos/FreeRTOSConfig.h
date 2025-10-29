@@ -106,7 +106,7 @@
 #define configTIMER_TASK_STACK_DEPTH            1024
 
 /* FreeRTOS command line definitions */
-#define configCOMMAND_INT_MAX_OUTPUT_SIZE       4096
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE       8192
 
 /* Interrupt nesting behaviour configuration. */
 /*

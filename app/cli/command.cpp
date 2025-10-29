@@ -91,9 +91,11 @@ static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer,
 
     /* Generate a table of task stats. */
     ( void ) strncpy( pcWriteBuffer, pcHeader, xWriteBufferLen );
-    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen );
+    /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen - strlen(pcWriteBuffer) );
     vTaskList( pcWriteBuffer + strlen( pcWriteBuffer ) );
-    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen );
+    /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen - strlen(pcWriteBuffer) );
 
     /* There is no more data to return after this single string, so return
      * pdFALSE. */

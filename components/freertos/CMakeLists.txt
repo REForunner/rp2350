@@ -29,4 +29,5 @@ target_compile_definitions(freertos PUBLIC
 target_link_libraries(freertos PUBLIC
         FreeRTOS-Kernel
         FreeRTOS-Kernel-Heap4
-        pico_stdlib)
+        pico_stdlib
+        )
