@@ -25,6 +25,51 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
+# New addition: Automatically initialize and update all Git submodules.
+find_package(Git QUIET)
+if(GIT_FOUND)
+    # 1. Check if the .gitmodules file exists (to confirm that the project has submodule configuration)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.gitmodules")
+        message(STATUS "Found .gitmodules; checking Git submodules...")
+        
+        # 2. execute git submodule update --init --recursive：
+        #    - init：Initialize the unregistered sub-module
+        #    - recursive：Recursive update of nested sub-modules (such as sub-modules that the sub-modules depend on)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}  # Project root directory
+            RESULT_VARIABLE _git_submod_result          # Command return code
+            OUTPUT_VARIABLE _git_submod_out             # standard output
+            ERROR_VARIABLE _git_submod_err              # Error output
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+        
+        # 3. Check the execution result of the command
+        if(_git_submod_result EQUAL 0)
+            message(STATUS "All Git submodules updated successfully.")
+        else()
+            # Non-fatal error: Prompt to manually execute the command (to prevent CMake from failing directly)
+            message(WARNING 
+                "Failed to update Git submodules (return code: ${_git_submod_result}).\n"
+                "Standard Output: ${_git_submod_out}\n"
+                "Error Output: ${_git_submod_err}\n"
+                "Please manually run this command in project root: \n"
+                "  git submodule update --init --recursive"
+            )
+        endif()
+    else()
+        message(STATUS "No .gitmodules file found; no Git submodules to update.")
+    endif()
+else()
+    # Git not found: Prompting user to install Git
+    message(WARNING 
+        "Git is not installed on your system.\n"
+        "Cannot auto-update Git submodules. Please install Git first, then run:\n"
+        "  git submodule update --init --recursive"
+    )
+endif()
+
 # set freertos path
 set(FREERTOS_KERNEL_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/FreeRTOS-Kernel CACHE PATH "")
 

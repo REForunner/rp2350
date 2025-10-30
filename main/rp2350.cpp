@@ -1,7 +1,7 @@
 #include "rp2350.h"
 
 // record psram size
-size_t psram_size = 0UL;
+size_t xPsramSize = 0UL;
 // Create driver instance
 UartDmaDriver uart_driver(UART_CLI, UART_CLI_TX_PIN, UART_CLI_RX_PIN, UART_CLIBAUD_RATE);
 
@@ -24,7 +24,7 @@ int main(void)
     vSerialInit();
     
     // Initialise PSRAM and get the psram size
-    psram_size = sfe_setup_psram(PSRAM_CSI_PIN);
+    xPsramSize = sfe_setup_psram(PSRAM_CSI_PIN);
     
     // Initialise uart0
     vbspUARTInit(&uart_driver); 

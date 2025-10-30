@@ -36,7 +36,7 @@ extern "C" {
 
 
 // record psram size
-extern size_t psram_size;
+extern size_t xPsramSize;
 
 
 #ifdef __cplusplus
