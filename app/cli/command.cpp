@@ -86,9 +86,10 @@ static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer,
      * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
      * write buffer length is adequate, so does not check for buffer overflows. */
     ( void ) pcCommandString;
-    ( void ) xWriteBufferLen;
     configASSERT( pcWriteBuffer );
 
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
     /* Generate a table of task stats. */
     ( void ) strncpy( pcWriteBuffer, pcHeader, xWriteBufferLen );
     /* Note: When used continuously, Pay attention to the remaining length!!!!! */
@@ -129,8 +130,10 @@ static BaseType_t prvGetUID( char * pcWriteBuffer,
     ( void ) pcCommandString;
     configASSERT( pcWriteBuffer );
 
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
     /* format string */
-    int len = snprintf(pcWriteBuffer, xWriteBufferLen, "uid: 0x%llX\r\n", board_id);
+    ( void ) snprintf(pcWriteBuffer, xWriteBufferLen, "uid: 0x%llX\r\n", board_id);
 
     /* There is no more data to return after this single string, so return
      * pdFALSE. */
@@ -161,9 +164,11 @@ static BaseType_t prvQueryHeapCommand( char * pcWriteBuffer,
         * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
         * write buffer length is adequate, so does not check for buffer overflows. */
     ( void ) pcCommandString;
-    ( void ) xWriteBufferLen;
     configASSERT( pcWriteBuffer );
 
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
+    /* print the heap statsus */
     ( void ) snprintf( pcWriteBuffer, xWriteBufferLen, "Current free heap %d bytes, minimum ever free heap %d bytes\r\n", ( int ) xPortGetFreeHeapSize(), ( int ) xPortGetMinimumEverFreeHeapSize() );
 
     /* There is no more data to return after this single string, so return
@@ -199,16 +204,16 @@ static BaseType_t prvStartStopTraceCommand( char * pcWriteBuffer,
     /* Remove compile time warnings about unused parameters, and check the
         * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
         * write buffer length is adequate, so does not check for buffer overflows. */
-    ( void ) pcCommandString;
-    ( void ) xWriteBufferLen;
     configASSERT( pcWriteBuffer );
 
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
     /* Obtain the parameter string. */
     pcParameter = FreeRTOS_CLIGetParameter
                     (
-        pcCommandString,        /* The command string itself. */
-        1,                      /* Return the first parameter. */
-        &lParameterStringLength /* Store the parameter string length. */
+                        pcCommandString,        /* The command string itself. */
+                        1,                      /* Return the first parameter. */
+                        &lParameterStringLength /* Store the parameter string length. */
                     );
 
     /* Sanity check something was returned. */
@@ -254,11 +259,160 @@ static BaseType_t prvStartStopTraceCommand( char * pcWriteBuffer,
 commandREGISTER static const CLI_Command_Definition_t xStartStopTrace =
 {
     "trace",
-    "\r\ntrace [start | stop]:\r\n Starts or stops a trace recording for viewing in FreeRTOS+Trace\r\n",
+    "\r\ntrace <start | stop>:\r\n Starts or stops a trace recording for viewing in FreeRTOS+Trace\r\n",
     prvStartStopTraceCommand, /* The function to run. */
     1                         /* One parameter is expected.  Valid values are "start" and "stop". */
 };
 
 #endif /* configINCLUDE_TRACE_RELATED_CLI_COMMANDS */
+
+/*-----------------------------------------------------------*/
+
+/*
+ * Implements the "read" commands;
+ */
+static BaseType_t prvReadCommand( char * pcWriteBuffer,
+                                  size_t xWriteBufferLen,
+                                  const char * pcCommandString )
+{
+    const char * pcParameter;
+    BaseType_t lParameterStringLength;
+    char * ptr;
+
+    static UBaseType_t ulAddressStart = 0U;
+    static UBaseType_t ulReadSize = 0U;         // bytes
+    static UBaseType_t ulHasReadSize = 0U;
+    /* 
+     * The loop for controlling the output content.
+     *      bit[31] = 1: The parameters have been extracted.
+     *      bit[30] = 1: The header has been printed.
+     * 
+     *      Clean up after each print job is completed.
+     */
+    static BaseType_t lFlag = 0U;
+
+    const char * const pcHeader = "  Address\t00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F           text\r\n";
+    const char * const pcGap = "------------------------------------------------------------------------------------\r\n";
+    
+    /* Remove compile time warnings about unused parameters, and check the
+        * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+        * write buffer length is adequate, so does not check for buffer overflows. */
+    configASSERT( pcWriteBuffer );
+
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
+    
+    /* Obtain the parameter string. */
+    if(!(lFlag & (1UL << 31)))
+    {
+        /* Extract all parameters at once */
+        for(size_t n = 1; n <= 2U; n += 1U)
+        {
+            /* Obtain them one by one, totaling two parameters */
+            pcParameter = FreeRTOS_CLIGetParameter
+                            (
+                                pcCommandString,        /* The command string itself. */
+                                (UBaseType_t)n,         /* Return the first parameter. */
+                                &lParameterStringLength /* Store the parameter string length. */
+                            );
+            /* Sanity check something was returned. */
+            configASSERT( pcParameter );
+            
+            if(1U == n)
+            {
+                /* Extract the address */
+                ulAddressStart = (UBaseType_t)strtoul(pcParameter, &ptr, 0x10);
+            }
+            else
+            {
+                /* Extract the read size */
+                ulReadSize = (UBaseType_t)strtoul(pcParameter, &ptr, 10U);
+            }
+        }
+
+        /* The parameters have been extracted. */
+        lFlag |= (1UL << 31);
+    }
+
+    /* creat and print header */
+    if(!(lFlag & (1UL << 30)))
+    {
+        /* Generate a table of task stats. */
+        ( void ) strncpy( pcWriteBuffer, pcHeader, xWriteBufferLen );
+        /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+        ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen - strlen(pcWriteBuffer) );
+        /* The header has been printed. */
+        lFlag |= (1UL << 30);
+    }
+
+    /* Process the data in 16-byte blocks. */
+    if(ulHasReadSize < ulReadSize) 
+    {
+        /* Printed Address (8-bit Hexadecimal) */
+        ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "0x%08X\t", (unsigned int)ulAddressStart);
+        
+        /* Print out a 16-byte hexadecimal value */
+        for (size_t j = 0; j < 16U; j++) 
+        {
+            /* When the data size is less than 16 bytes, fill with spaces */
+            if (ulHasReadSize + j < ulReadSize)
+            {
+                ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "%02X ", *(uint8_t *)(ulAddressStart + j));
+            }
+            else
+            {
+                ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "   ");
+            }
+        }
+
+        /* Print four space */
+        ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "    ");
+
+        /* Print the corresponding ASCII text */
+        for (size_t m = 0; m < 16U; m++) 
+        {
+            if (ulHasReadSize + m < ulReadSize)
+            {
+                /* Printable characters are displayed directly, while non-printable characters are shown as '.' */
+                unsigned char c = (unsigned char) *(uint8_t *)(ulAddressStart + m);
+                ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "%c", isprint(c) ? c : '.');
+            }
+        }
+
+        /* Print A new line */
+        ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "\r\n");
+        /* recard has read size and step address */
+        ulHasReadSize += 16U;
+        ulAddressStart += 0x10UL;
+
+        /* There is more data to be returned as no parameters have been echoed
+         * back yet. */
+        return pdPASS;
+    }
+    else
+    {
+        /* read complete and clear all variable */
+        ulAddressStart = 0U;
+        ulReadSize = 0U;         // bytes
+        ulHasReadSize = 0U;
+        lFlag = 0U;
+
+        /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+        ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen - strlen(pcWriteBuffer) );
+
+        /* There is no more data to return after this single string, so return
+            * pdFALSE. */
+        return pdFALSE;
+    }
+}
+
+/* Structure that defines the "read" command line command. */
+commandREGISTER static const CLI_Command_Definition_t xRead =
+{
+    "read",
+    "\r\nread <address[hex]> <number[dec]>:\r\n Read <number> bytes value from <address> to <address + number>.\r\n",
+    prvReadCommand,     /* The function to run. */
+    2                   /* The user can enter any number of commands. */
+};
 
 /*-----------------------------------------------------------*/
