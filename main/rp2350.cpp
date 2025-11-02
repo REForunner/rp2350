@@ -25,7 +25,10 @@ int main(void)
     
     // Initialise PSRAM and get the psram size
     xPsramSize = sfe_setup_psram(PSRAM_CSI_PIN);
-    
+    // PSRAM Initialise success, zero clearing
+    // if(0UL != xPsramSize)
+    //     memset((void *)PSRAM_BASE, 0x00U, xPsramSize);
+
     // Initialise uart0
     vbspUARTInit(&uart_driver); 
     

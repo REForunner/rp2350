@@ -107,8 +107,8 @@ static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer,
  * a table that gives information on each task in the system. */
 commandREGISTER static const CLI_Command_Definition_t xTaskStats =
 {
-    "task",                 /* The command string to type. */
-    "\r\ntask:\r\n Displays a table showing the state of each FreeRTOS task\r\n",
+    "task-stats",                 /* The command string to type. */
+    "\r\ntask-stats:\r\n Displays a table showing the state of each FreeRTOS task\r\n",
     prvTaskStatsCommand,    /* The function to run. */
     0                       /* No parameters are expected. */
 };
@@ -318,15 +318,41 @@ static BaseType_t prvReadCommand( char * pcWriteBuffer,
             /* Sanity check something was returned. */
             configASSERT( pcParameter );
             
+            /**
+             * Distinguish the base number system.
+             *      binary : 2          --> 0b/0B
+             *      octal : 8           --> 0
+             *      decimal : 10        --> other
+             *      hexadecimal : 16    --> 0x/0X
+            */
+            int ucNumberBase = (int)eUtilGetNumberBase(pcParameter);
+            if((int)BASE_INVALID == ucNumberBase)
+            {
+                /* invalid parameter value */
+                /* read complete and clear all variable */
+                ulAddressStart = 0U;
+                ulReadSize = 0U;         // bytes
+                ulHasReadSize = 0U;
+                lFlag = 0U;
+
+                /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+                ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), "'read' : Incorrect command parameter(s)!!!\r\n", xWriteBufferLen - strlen(pcWriteBuffer) );
+
+                /* There is no more data to return after this single string, so return
+                    * pdFALSE. */
+                return pdFALSE;
+            }
+            
+            /* Convert a numeric string to a number */
             if(1U == n)
             {
                 /* Extract the address */
-                ulAddressStart = (UBaseType_t)strtoul(pcParameter, &ptr, 0x10);
+                ulAddressStart = (UBaseType_t)strtoul(pcParameter, &ptr, ucNumberBase);
             }
             else
             {
                 /* Extract the read size */
-                ulReadSize = (UBaseType_t)strtoul(pcParameter, &ptr, 10U);
+                ulReadSize = (UBaseType_t)strtoul(pcParameter, &ptr, ucNumberBase);
             }
         }
 
@@ -410,7 +436,7 @@ static BaseType_t prvReadCommand( char * pcWriteBuffer,
 commandREGISTER static const CLI_Command_Definition_t xRead =
 {
     "read",
-    "\r\nread <address[hex]> <number[dec]>:\r\n Read <number> bytes value from <address> to <address + number>.\r\n",
+    "\r\nread <address> <number>:\r\n Read <number> bytes value from <address> to <address + number>.\r\n",
     prvReadCommand,     /* The function to run. */
     2                   /* The user can enter any number of commands. */
 };
