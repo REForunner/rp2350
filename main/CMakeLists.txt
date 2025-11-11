@@ -24,4 +24,4 @@ endif()
 
 target_include_directories(main INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(main INTERFACE pico_stdlib)
+target_link_libraries(main INTERFACE pico_stdlib hardware_pio hardware_dma hardware_clocks)

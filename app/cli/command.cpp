@@ -1,4 +1,5 @@
 #include "cli.hpp"
+#include <inttypes.h>
 
 /*-----------------------------------------------------------*/
 
@@ -69,7 +70,7 @@ void vCommandRegister(void)
 
 /*-----------------------------------------------------------*/
 
-#if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) )
+#if ( ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) )
 
 /*
  * Implements the task-stats command.
@@ -78,7 +79,7 @@ static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer,
                                        size_t xWriteBufferLen,
                                        const char * pcCommandString )
 {
-    const char * const pcHeader = "Task\t\tState\tPrior\tStack\tNumber\tAffinity Mask\r\n";
+    const char * const pcHeader = "Task\t\tState\tPrior\tStack\tNumber\tAffinity-Mask\r\n";
     const char * const pcGap = "-------------------------------------------------------------\r\n";
     BaseType_t xSpacePadding;
 
@@ -98,6 +99,23 @@ static BaseType_t prvTaskStatsCommand( char * pcWriteBuffer,
     /* Note: When used continuously, Pay attention to the remaining length!!!!! */
     ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen - strlen(pcWriteBuffer) );
 
+#if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) )
+    
+    const char * const pcTimeHeader = "Task\t\tCPU-Time\tUsage\r\n";
+    const char * const pcTimeGap = "---------------------------------------\r\n";
+    /* Start a new line */
+    /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), "\r\n", xWriteBufferLen - strlen(pcWriteBuffer) );
+    /* Generate a table of task cpu usage. */
+    /* Note: When used continuously, Pay attention to the remaining length!!!!! */
+    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcTimeHeader, xWriteBufferLen - strlen(pcWriteBuffer) );
+    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcTimeGap, xWriteBufferLen - strlen(pcWriteBuffer) );
+    /* get cpu run time information */
+    vTaskGetRunTimeStats( pcWriteBuffer + strlen( pcWriteBuffer ) );
+    ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcTimeGap, xWriteBufferLen - strlen(pcWriteBuffer) );    
+
+#endif /* ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
+
     /* There is no more data to return after this single string, so return
      * pdFALSE. */
     return pdFALSE;
@@ -113,7 +131,7 @@ commandREGISTER static const CLI_Command_Definition_t xTaskStats =
     0                       /* No parameters are expected. */
 };
 
-#endif /* ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) ) */
+#endif /* ( ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
 
 /*-----------------------------------------------------------*/
 
@@ -133,7 +151,14 @@ static BaseType_t prvGetUID( char * pcWriteBuffer,
     /* clear write buffer */
     memset( pcWriteBuffer, 0x00, xWriteBufferLen );
     /* format string */
-    ( void ) snprintf(pcWriteBuffer, xWriteBufferLen, "uid: 0x%llX\r\n", board_id);
+    ( void ) snprintf(pcWriteBuffer + strlen(pcWriteBuffer), xWriteBufferLen -  strlen(pcWriteBuffer), "uid: 0x");
+    /* uid */
+    for(int i =0; i< sizeof(board_id); i++)
+    {
+        ( void ) snprintf(pcWriteBuffer + strlen(pcWriteBuffer), xWriteBufferLen -  strlen(pcWriteBuffer), "%X", board_id.id[i]);
+    }
+    /* new line */
+    ( void ) snprintf(pcWriteBuffer + strlen(pcWriteBuffer), xWriteBufferLen -  strlen(pcWriteBuffer), "\r\n");
 
     /* There is no more data to return after this single string, so return
      * pdFALSE. */
@@ -168,8 +193,16 @@ static BaseType_t prvQueryHeapCommand( char * pcWriteBuffer,
 
     /* clear write buffer */
     memset( pcWriteBuffer, 0x00, xWriteBufferLen );
+    /* print the heap numbers */
+    ( void ) snprintf( pcWriteBuffer + strlen(pcWriteBuffer), xWriteBufferLen - strlen(pcWriteBuffer), "Having two heap areas:\r\n\r\n" );
+    /* print one of the heap information */
+    /* Iterate until the sentinel { NULL, 0 } entry in xHeapRegions is found. */
+    for (int i = 0; xHeapRegions[i].pucStartAddress != NULL; ++i)
+    {
+        ( void ) snprintf( pcWriteBuffer + strlen(pcWriteBuffer), xWriteBufferLen - strlen(pcWriteBuffer), "\t[%d]: Address: 0x%" PRIXPTR "\tSize(bytes): 0x%zX\r\n\r\n", i, (uintptr_t)xHeapRegions[i].pucStartAddress, xHeapRegions[i].xSizeInBytes );
+    }
     /* print the heap statsus */
-    ( void ) snprintf( pcWriteBuffer, xWriteBufferLen, "Current free heap %d bytes, minimum ever free heap %d bytes\r\n", ( int ) xPortGetFreeHeapSize(), ( int ) xPortGetMinimumEverFreeHeapSize() );
+    ( void ) snprintf( pcWriteBuffer + strlen(pcWriteBuffer), xWriteBufferLen - strlen(pcWriteBuffer), "Current free heap %d bytes, minimum ever free heap %d bytes\r\n", ( int ) xPortGetFreeHeapSize(), ( int ) xPortGetMinimumEverFreeHeapSize() );
 
     /* There is no more data to return after this single string, so return
         * pdFALSE. */
@@ -227,12 +260,16 @@ static BaseType_t prvStartStopTraceCommand( char * pcWriteBuffer,
         // vTraceStop();
         // vTraceClear();
         // vTraceStart();
+        LCD_BL_PIN_ON();
+
         ( void ) snprintf( pcWriteBuffer, xWriteBufferLen, "Trace recording (re)started.\r\n" );
     }
     else if( strncmp( pcParameter, "stop", strlen( "stop" ) ) == 0 )
     {
         /* End the trace, if one is running. */
         // vTraceStop();
+        LCD_BL_PIN_OFF();
+
         ( void ) snprintf( pcWriteBuffer, xWriteBufferLen, "Stopping trace recording.\r\n" );
     }
     else if( strncmp( pcParameter, "status", strlen( "status" ) ) == 0 )
@@ -427,7 +464,7 @@ static BaseType_t prvReadCommand( char * pcWriteBuffer,
         ( void ) strncpy( pcWriteBuffer + strlen( pcWriteBuffer ), pcGap, xWriteBufferLen - strlen(pcWriteBuffer) );
 
         /* There is no more data to return after this single string, so return
-            * pdFALSE. */
+         * pdFALSE. */
         return pdFALSE;
     }
 }
@@ -435,10 +472,69 @@ static BaseType_t prvReadCommand( char * pcWriteBuffer,
 /* Structure that defines the "read" command line command. */
 commandREGISTER static const CLI_Command_Definition_t xRead =
 {
-    "read",
-    "\r\nread <address> <number>:\r\n Read <number> bytes value from <address> to <address + number>.\r\n",
+    "r",
+    "\r\nr <address> <number>:\r\n Read <number> bytes value from <address> to <address + number>.\r\n",
     prvReadCommand,     /* The function to run. */
     2                   /* The user can enter any number of commands. */
+};
+
+/*-----------------------------------------------------------*/
+
+/*
+ * Implements the lcd command.
+ */
+static BaseType_t prvLCD( char * pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char * pcCommandString )
+{
+    const char * pcParameter;
+    BaseType_t lParameterStringLength;
+    char * ptr;
+
+    /* Remove compile time warnings about unused parameters, and check the
+        * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+        * write buffer length is adequate, so does not check for buffer overflows. */
+    configASSERT( pcWriteBuffer );
+
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
+
+    /* Obtain them one by one, totaling two parameters */
+    pcParameter = FreeRTOS_CLIGetParameter
+                    (
+                        pcCommandString,        /* The command string itself. */
+                        (UBaseType_t)1,         /* Return the first parameter. */
+                        &lParameterStringLength /* Store the parameter string length. */
+                    );
+    /* Sanity check something was returned. */
+    configASSERT( pcParameter );
+    
+    /**
+     * Distinguish the base number system.
+     *      binary : 2          --> 0b/0B
+     *      octal : 8           --> 0
+     *      decimal : 10        --> other
+     *      hexadecimal : 16    --> 0x/0X
+    */
+    int ucNumberBase = (int)eUtilGetNumberBase(pcParameter);
+
+    /* Extract the address */
+    UBaseType_t ulAddressStart = (UBaseType_t)strtoul(pcParameter, &ptr, ucNumberBase);
+
+    BaseType_t xResult = xTaskNotify( xLCDHandle, ulAddressStart, eSetValueWithOverwrite );
+
+    /* There is no more data to return after this single string, so return
+     * pdFALSE. */
+    return pdFALSE;
+}
+
+/* Structure that defines the "lcd" command line command. */
+commandREGISTER static const CLI_Command_Definition_t xLCD =
+{
+    "lcd",
+    "\r\nlcd <value>:\r\n .\r\n",
+    prvLCD,     /* The function to run. */
+    1                   /* The user can enter any number of commands. */
 };
 
 /*-----------------------------------------------------------*/

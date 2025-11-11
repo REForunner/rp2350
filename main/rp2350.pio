@@ -1,0 +1,112 @@
+.program lcd_spi
+
+.side_set 3             ;side-set pin number is 3
+.pio_version 0          ;pio version is at least 0(rp2040)
+.fifo tx                ;TX FIFO is exclusive to 8 bytes
+.out 1 left auto        ;out pin numbers is 1, msb first, auto pull enable
+
+;Data/CMD select pin is gpio 8, and on side-set pin 0
+;Chip Select pin is gpio 9, and on side-set pin 1
+;spi clock pin is gpio 10, and on side-set pin 2
+;spi mosi pin is gpio 11, and on out pin 0
+
+.wrap_target
+start:
+    out x, 24           side 0b010  ;clk->0,cs->disable,dc->cmd,msb 24-bit is 7
+cmd_loop:
+    out pins, 1         side 0b000  ;clk->0,cs->enable,dc->cmd
+    jmp x-- cmd_loop    side 0b100  ;clk->1,cs->enable,dc->cmd
+    out x, 32           side 0b000  ;clk->0,cs->enable,dc->cmd,reload bit
+    jmp !x start        side 0b000  ;clk->0,cs->enable,dc->cmd,no bit
+data_loop:    
+    out pins, 1         side 0b001  ;clk->0,cs->enable,dc->data
+    jmp x-- data_loop   side 0b101  ;clk->1,cs->enable,dc->data
+end:
+    out null, 32        side 0b010  ;clk->0,cs->disable,dc->cmd,abandon the remaining OSR
+.wrap
+
+
+% c-sdk {
+// For optimal use of DMA bandwidth we would use an autopull threshold of 32,
+// and Set the DMA bit width to 32 and enable Bswap.
+
+#include "pico/binary_info.h"
+
+/// @brief pio init
+/// @param pio : PIO instance
+/// @param SidePinBase : side-set pins base
+/// @param OutPin : out pin
+/// @param div : pio clock divide number
+/// @return state machine number
+static inline uint ullcd_program_init(PIO pio, uint SidePinBase, uint OutPin, float div)
+{
+    // Make the DC pin available to picotool
+    bi_decl(bi_1pin_with_name(SidePinBase, "LCD DC"));
+    // Make the CS pin available to picotool
+    bi_decl(bi_1pin_with_name(SidePinBase + 1, "LCD CS"));
+    // Make the CLK pin available to picotool
+    bi_decl(bi_1pin_with_name(SidePinBase + 2, "LCD CLK"));
+    // Make the MOSI pin available to picotool
+    bi_decl(bi_1pin_with_name(OutPin, "LCD MOSI"));    
+
+    // get pio program offset
+    uint pio_offset = pio_add_program(pio, &lcd_spi_program);
+    // get idle state machine
+    uint idle_sm = pio_claim_unused_sm(pio, true);
+    // gpio switch to pio function
+    pio_gpio_init(pio, SidePinBase + 0);    // cata/cmd select, [side-set pin 0]
+    pio_gpio_init(pio, SidePinBase + 1);    // chip select,     [side-set pin 1]
+    pio_gpio_init(pio, SidePinBase + 2);    // spi clock,       [side-set pin 2]
+    pio_gpio_init(pio, OutPin);             // spi mosi,        [out pin]
+    // output 0, SPI_CPOL_0, SPI_CPHA_0
+    /* do something... */
+    // Set pin direction, all output
+    pio_sm_set_consecutive_pindirs(pio, idle_sm, SidePinBase + 0, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, idle_sm, SidePinBase + 1, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, idle_sm, SidePinBase + 2, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, idle_sm, OutPin, 1, true);
+    // set state machine
+    pio_sm_config c = lcd_spi_program_get_default_config(pio_offset);
+    // set side-set pin base
+    sm_config_set_sideset_pins(&c, SidePinBase);
+    // set out pin
+    sm_config_set_out_pins(&c, OutPin, 1);
+    // set clock divide
+    sm_config_set_clkdiv(&c, div);
+    pio_sm_init(pio, idle_sm, pio_offset, &c);
+    pio_sm_set_enabled(pio, idle_sm, true);
+    // return used sm
+    return idle_sm;
+}
+
+
+// Send data to Pio
+
+
+/// @brief put a double-word(32-bit) to lcd pio sm
+/// @param pio : PIO instance
+/// @param sm : state machine number
+/// @param x : need transmit data
+static inline void vlcd_put(PIO pio, uint sm, uint32_t x) 
+{
+    while (pio_sm_is_tx_fifo_full(pio, sm))
+        ;
+    *(volatile uint32_t*)&pio->txf[sm] = x;
+}
+
+
+// SM is done when it stalls on an empty FIFO
+
+
+/// @brief wait lcd pio idle
+/// @param pio : PIO instance
+/// @param sm : state machine number
+static inline void vlcd_wait_idle(PIO pio, uint sm) 
+{
+    uint32_t sm_stall_mask = 1u << (sm + PIO_FDEBUG_TXSTALL_LSB);
+    pio->fdebug = sm_stall_mask;
+    while (!(pio->fdebug & sm_stall_mask))
+        ;
+}
+
+%}

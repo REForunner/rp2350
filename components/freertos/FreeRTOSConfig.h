@@ -76,7 +76,8 @@
 #define configSUPPORT_STATIC_ALLOCATION         1  // Set to 1
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
 #define configTOTAL_HEAP_SIZE                   (256 * 1024)
-#define configAPPLICATION_ALLOCATED_HEAP        0
+#define configAPPLICATION_ALLOCATED_HEAP        1
+#define configENABLE_HEAP_PROTECTOR             1
 
 /* Hook function related definitions. */
 #define configUSE_IDLE_HOOK                     0
@@ -91,6 +92,15 @@
 #define configUSE_STATS_FORMATTING_FUNCTIONS    1
 #define configINCLUDE_QUERY_HEAP_COMMAND        1
 #define configINCLUDE_TRACE_RELATED_CLI_COMMANDS  1
+
+#if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) )
+
+// CPU running time statistics
+extern volatile uint32_t ulHighFrequencyTimerTicks;
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()   (ulHighFrequencyTimerTicks = 0ul)
+#define portGET_RUN_TIME_COUNTER_VALUE()           ulHighFrequencyTimerTicks
+
+#endif /* ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
 
 /* Possible values are portCLEAN_UP_TCB, portPRE_DELETION_HOOK_TCB. */
 #define configTASK_DELETION_SUPPORT             0

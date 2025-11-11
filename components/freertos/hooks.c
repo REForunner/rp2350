@@ -1,11 +1,17 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <stdio.h>
+// Include sys/types.h before inttypes.h to work around issue with
+// certain versions of GCC and newlib which causes omission of PRIx64
+#include <sys/types.h>
 #include <inttypes.h>   // for PRIx macros if needed
+#include "pico/rand.h"
 
 // Idle task
 static StaticTask_t xIdleTCB;
 static StackType_t  xIdleStack[configMINIMAL_STACK_SIZE];
+// CPU running time statistics
+volatile uint32_t ulHighFrequencyTimerTicks;
 
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppTCB,
                                     StackType_t **ppStack,
@@ -68,3 +74,14 @@ void vAssertCalled( const char *file, uint32_t line )
     taskDISABLE_INTERRUPTS();
     for(;;);
 }
+
+#if ( configENABLE_HEAP_PROTECTOR == 1 )
+
+/**
+ * @brief Application provided function to get a random value to be used as canary.
+ *
+ * @param pxHeapCanary [out] Output parameter to return the canary value.
+ */
+void vApplicationGetRandomHeapCanary( portPOINTER_SIZE_TYPE * pxHeapCanary ) { * pxHeapCanary = (portPOINTER_SIZE_TYPE)get_rand_32(); }
+
+#endif /* configENABLE_HEAP_PROTECTOR */

@@ -85,6 +85,9 @@ pico_sdk_init()
 
 add_executable(rp2350)
 
+# Init pio
+pico_generate_pio_header(rp2350 ${CMAKE_CURRENT_LIST_DIR}/main/rp2350.pio)
+
 pico_set_program_name(rp2350 "rp2350")
 pico_set_program_version(rp2350 "0.1")
 
@@ -96,6 +99,7 @@ set(UART_RX_MAX_EVT_DATA_SIZE 1024)    # Max event data size (default: 256)
 set(UART_TX_BUFFER_SIZE 1024)          # TX buffer size (default: 256)
 set(UART_WD_TICK_US 450)               # Tick time for DMA watchdog[us] (default: 450)
 set(UART_WD_SILENCE_TICKS 4)           # The number of ticks to consider silence (default: 4)
+set(CPU_RUN_TIME_BASE_US 500)          # Task running time statistics time-base[us] (default: 500)
 
 # add subdirectory.
 add_subdirectory(main)                      # main
@@ -113,6 +117,9 @@ pico_enable_stdio_usb(rp2350 0)
 # Add the standard library to the build
 target_link_libraries(rp2350 PRIVATE
         pico_stdlib
+        hardware_pio
+        hardware_dma
+        hardware_clocks
         main            # main library
         app             # applocation
         sparkfun_pico   # psram
@@ -121,6 +128,7 @@ target_link_libraries(rp2350 PRIVATE
         bsp             # board support package
         UartDmaDriver   # UartDmaDriver
         pico_unique_id  # unique id
+        pico_rand       # random
         # tinyusb_device  # tinyusb
         # tinyusb_board
         )
