@@ -26,6 +26,8 @@
 #include "hardware/pio.h"
 #include "rp2350.pio.h"
 #include "lcd/lcd.hpp"
+#include "driver_st7789.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +98,7 @@ extern "C" {
 
 // PIO config
 #define LCD_PROBE_SM                0
-#define LCD_PROBE_SIDE_PIN_BASE     SPI_LCD_DC_PIN                  // gpio 8
+#define LCD_PROBE_SIDE_PIN_BASE     SPI_LCD_DC_PIN                 // gpio 8
 #define LCD_PROBE_PIN_DC            (LCD_PROBE_SIDE_PIN_BASE + 0)  // gpio 8
 #define LCD_PROBE_PIN_CS            (LCD_PROBE_SIDE_PIN_BASE + 1)  // gpio 9
 #define LCD_PROBE_PIN_CLK           (LCD_PROBE_SIDE_PIN_BASE + 2)  // gpio 10

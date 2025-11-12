@@ -15,11 +15,6 @@ void vLCDTask(void * pv)
 
     // Initialise pio
     uint sm = ullcd_program_init(pio, SidePinBase, OutPin, div);
-
-    // initialise back-light gpio
-    gpio_init((uint)px->BackLightPin);
-    gpio_pull_down((uint)px->BackLightPin);
-    gpio_set_dir((uint)px->BackLightPin, GPIO_OUT);
     
     uint32_t ulReceivedValue;
     

@@ -17,7 +17,7 @@ cmd_loop:
     out pins, 1         side 0b000  ;clk->0,cs->enable,dc->cmd
     jmp x-- cmd_loop    side 0b100  ;clk->1,cs->enable,dc->cmd
     out x, 32           side 0b000  ;clk->0,cs->enable,dc->cmd,reload bit
-    jmp !x start        side 0b000  ;clk->0,cs->enable,dc->cmd,no bit
+    jmp !x end          side 0b000  ;clk->0,cs->enable,dc->cmd,no bit
 data_loop:    
     out pins, 1         side 0b001  ;clk->0,cs->enable,dc->data
     jmp x-- data_loop   side 0b101  ;clk->1,cs->enable,dc->data

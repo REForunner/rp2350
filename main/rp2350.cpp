@@ -74,7 +74,11 @@ int main(void)
     
     // enable trace recorder
     
-    //
+    // initialise back-light gpio
+    gpio_init((uint)xLCD.BackLightPin);
+    gpio_pull_down((uint)xLCD.BackLightPin);
+    gpio_set_dir((uint)xLCD.BackLightPin, GPIO_OUT);
+    LCD_BL_PIN_OFF();
     
     /* Create that task that handles the console itself. */
     xTaskCreate( vLCDTask, "lcd", 1024U, (void *)&xLCD, configTIMER_TASK_PRIORITY - 2, &xLCDHandle );
