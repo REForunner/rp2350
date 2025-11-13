@@ -26,7 +26,6 @@
 #include "hardware/pio.h"
 #include "rp2350.pio.h"
 #include "lcd/lcd.hpp"
-#include "driver_st7789.h"
 
 
 #ifdef __cplusplus
@@ -97,7 +96,8 @@ extern "C" {
 
 
 // PIO config
-#define LCD_PROBE_SM                0
+#define LCD_PIO                     0
+#define LCD_PIO_CLK_DIV             1.0f
 #define LCD_PROBE_SIDE_PIN_BASE     SPI_LCD_DC_PIN                 // gpio 8
 #define LCD_PROBE_PIN_DC            (LCD_PROBE_SIDE_PIN_BASE + 0)  // gpio 8
 #define LCD_PROBE_PIN_CS            (LCD_PROBE_SIDE_PIN_BASE + 1)  // gpio 9
@@ -118,20 +118,9 @@ extern size_t xPsramSize;
 extern const HeapRegion_t xHeapRegions[];
 // lcd task handle
 extern TaskHandle_t xLCDHandle;
+// lcd driver
+extern struct lcd_t xLCDdriver;
 
-
-// dma sniff must be enable
-// struct 
-// {
-//     char res1;  // must be 0
-//     char res2;  // must be 0
-//     char cmd;
-//     char cbits;  // must be 7
-    
-//     uint16_t dbits_msb;
-//     uint16_t dbits_lsb;
-//     uint32_t * data;
-// }
 
 #ifdef __cplusplus
 }

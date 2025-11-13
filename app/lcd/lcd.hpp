@@ -27,11 +27,12 @@
 /* Task Parameter Analysis */
 typedef struct lcd_t
 {
-    uint8_t pio; 
-    uint8_t SidePinBase;
-    uint8_t OutPin;
-    uint8_t BackLightPin;
-    uint8_t div;
+    uint const pio;
+    uint sm;
+    uint const SidePinBase;
+    uint const OutPin;
+    uint const BackLightPin;
+    float const div;
 } lcd_t;
 
 /*-----------------------------------------------------------*/

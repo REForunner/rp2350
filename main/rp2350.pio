@@ -1,6 +1,6 @@
 .program lcd_spi
 
-.side_set 3             ;side-set pin number is 3
+.side_set 3 opt         ;side-set pin number is 3
 .pio_version 0          ;pio version is at least 0(rp2040)
 .fifo tx                ;TX FIFO is exclusive to 8 bytes
 .out 1 left auto        ;out pin numbers is 1, msb first, auto pull enable
@@ -10,19 +10,25 @@
 ;spi clock pin is gpio 10, and on side-set pin 2
 ;spi mosi pin is gpio 11, and on out pin 0
 
+;Note:
+;   If the total number of bits of data in the data stage is a multiple of 32,
+;   then after the transmission is completed, a 32-bit number must be sent again 
+;   so that the program in the end label can be executed, 
+;   and the state machine of the compilation returns to its initial state!!!!!
+
 .wrap_target
 start:
     out x, 24           side 0b010  ;clk->0,cs->disable,dc->cmd,msb 24-bit is 7
 cmd_loop:
     out pins, 1         side 0b000  ;clk->0,cs->enable,dc->cmd
     jmp x-- cmd_loop    side 0b100  ;clk->1,cs->enable,dc->cmd
-    out x, 32           side 0b000  ;clk->0,cs->enable,dc->cmd,reload bit
-    jmp !x end          side 0b000  ;clk->0,cs->enable,dc->cmd,no bit
+    out x, 32
+    jmp !x start                    ;no bit, restart
 data_loop:    
     out pins, 1         side 0b001  ;clk->0,cs->enable,dc->data
     jmp x-- data_loop   side 0b101  ;clk->1,cs->enable,dc->data
 end:
-    out null, 32        side 0b010  ;clk->0,cs->disable,dc->cmd,abandon the remaining OSR
+    out null, 32                    ;abandon the remaining OSR
 .wrap
 
 
@@ -31,6 +37,47 @@ end:
 // and Set the DMA bit width to 32 and enable Bswap.
 
 #include "pico/binary_info.h"
+
+// if use dma, used it, and must be open bswap, and it bit width must be 32
+typedef struct
+{
+    char res1;  // must be 0
+    char res2;  // must be 0
+    char cmd;
+    char cbits;  // must be 7
+} __attribute__((packed)) pio_lcd_dma_bswap_cmd_t;
+
+static_assert(sizeof(pio_lcd_dma_bswap_cmd_t) == sizeof(uint32_t), "pio_lcd_dma_bswap_cmd_t size muts be 4-Byte!!!");
+
+
+typedef struct
+{
+    uint16_t dbits_msb;
+    uint16_t dbits_lsb;
+} __attribute__((packed)) pio_lcd_dma_bswap_data_bits_t;
+
+static_assert(sizeof(pio_lcd_dma_bswap_data_bits_t) == sizeof(uint32_t), "pio_lcd_dma_bswap_data_bits_t size muts be 4-Byte!!!");
+
+
+// if no use dma, used it
+typedef struct
+{
+    char cmd;
+    char cbits; // must be 7
+    char res1;  // must be 0
+    char res2;  // must be 0
+} __attribute__((packed)) pio_lcd_cmd_t;
+
+static_assert(sizeof(pio_lcd_cmd_t) == sizeof(uint32_t), "pio_lcd_cmd_t size muts be 4-Byte!!!");
+
+
+typedef struct
+{
+    uint32_t dbits;
+} __attribute__((packed)) pio_lcd_data_bits_t;
+
+static_assert(sizeof(pio_lcd_data_bits_t) == sizeof(uint32_t), "pio_lcd_data_bits_t size muts be 4-Byte!!!");
+
 
 /// @brief pio init
 /// @param pio : PIO instance
@@ -82,16 +129,99 @@ static inline uint ullcd_program_init(PIO pio, uint SidePinBase, uint OutPin, fl
 
 // Send data to Pio
 
+// Making use of the narrow store replication behaviour on RP2040 to get the
+// data left-justified (as we are using shift-to-left to get MSB-first serial)
 
 /// @brief put a double-word(32-bit) to lcd pio sm
 /// @param pio : PIO instance
 /// @param sm : state machine number
 /// @param x : need transmit data
-static inline void vlcd_put(PIO pio, uint sm, uint32_t x) 
+static inline void vlcd_put32(PIO pio, uint sm, uint32_t x) 
 {
     while (pio_sm_is_tx_fifo_full(pio, sm))
         ;
     *(volatile uint32_t*)&pio->txf[sm] = x;
+}
+
+/// @brief put a word(16-bit) to lcd pio sm
+/// @param pio : PIO instance
+/// @param sm : state machine number
+/// @param x : need transmit data
+static inline void vlcd_put16(PIO pio, uint sm, uint16_t x) 
+{
+    while (pio_sm_is_tx_fifo_full(pio, sm))
+        ;
+    *(volatile uint16_t*)&pio->txf[sm] = x;
+}
+
+/// @brief put a byte(8-bit) to lcd pio sm
+/// @param pio : PIO instance
+/// @param sm : state machine number
+/// @param x : need transmit data
+static inline void vlcd_put8(PIO pio, uint sm, uint8_t x) 
+{
+    while (pio_sm_is_tx_fifo_full(pio, sm))
+        ;
+    *(volatile uint8_t*)&pio->txf[sm] = x;
+}
+
+/// @brief Data stage regression, When the number of data bits sent is a multiple of 32
+/// @param pio : PIO instance
+/// @param sm : state machine number
+static inline void vlcd_sm_return_when32DataBit(PIO pio, uint sm) 
+{
+    vlcd_put32(pio, sm, 0UL);
+}
+
+/// @brief lcd send a frame include: cmd and data
+/// @param pio : PIO instance
+/// @param sm : state machine number
+/// @param cmd : lcd command
+/// @param data : pointer of lcd needed data
+/// @param bytes : bytes of all data
+static inline void vlcd_put_cmdAnddata(PIO pio, uint sm, uint8_t cmd, uint32_t * data, uint32_t bytes)
+{
+    /* 1. set cmd bits and cmd */
+    vlcd_put32(pio, sm, (0x00000700 | (uint32_t)cmd));
+    /* 2. set send data all bits */
+    if(0 == bytes || NULL == data)
+    {
+        /* no cmd param(data), sm return start */
+        vlcd_sm_return_when32DataBit(pio, sm);
+    }
+    else
+    {
+        /* have param(data) */
+        vlcd_put32(pio, sm, ((bytes * 8) - 1));
+    }
+    /* 3. send data */
+    int i = 0;
+    int remain = bytes % sizeof(uint32_t);
+    for( ; i < bytes / sizeof(uint32_t); i++)
+    {
+        /* put param(data) */
+        vlcd_put32(pio, sm, data[i]);
+    }
+    /* based on whether 32-bit alignment processing is performed */
+    /* non-aligned on 32-bit */
+    if(0 != remain)
+    {
+        /* 4. handling the remaining bytes */
+        uint8_t * redata = (uint8_t *)&(data[i]);
+        for(int m = 0; m < remain; m++)
+        {
+            /* put remaining bytes */
+            vlcd_put8(pio, sm, redata[m]);  // ?????
+        }
+        /* non-aligned autoregression */
+    }
+    /* aligned on 32-bit */
+    else
+    {
+        /* 5. determine whether manual regression is required */
+        /* sm return start */
+        vlcd_sm_return_when32DataBit(pio, sm);
+    }    
 }
 
 

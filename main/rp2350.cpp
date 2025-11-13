@@ -8,7 +8,7 @@
 
 
 // lcd driver
-static const lcd_t xLCD = { .pio = 0, .SidePinBase = (uint8_t)SPI_LCD_DC_PIN, .OutPin = (uint8_t)SPI_MOSI_PIN, .BackLightPin = (uint8_t)SPI_LCD_BL_PIN, .div = 10 };
+lcd_t xLCDdriver = { .pio = LCD_PIO, .SidePinBase = SPI_LCD_DC_PIN, .OutPin = SPI_MOSI_PIN, .BackLightPin = SPI_LCD_BL_PIN, .div = LCD_PIO_CLK_DIV };
 // lcd task handle
 TaskHandle_t xLCDHandle = NULL;
 // record psram size
@@ -73,15 +73,9 @@ int main(void)
     vbspUARTInit(&uart_driver); 
     
     // enable trace recorder
-    
-    // initialise back-light gpio
-    gpio_init((uint)xLCD.BackLightPin);
-    gpio_pull_down((uint)xLCD.BackLightPin);
-    gpio_set_dir((uint)xLCD.BackLightPin, GPIO_OUT);
-    LCD_BL_PIN_OFF();
-    
+        
     /* Create that task that handles the console itself. */
-    xTaskCreate( vLCDTask, "lcd", 1024U, (void *)&xLCD, configTIMER_TASK_PRIORITY - 2, &xLCDHandle );
+    xTaskCreate( vLCDTask, "lcd", 1024U, (void *)&xLCDdriver, configTIMER_TASK_PRIORITY - 2, &xLCDHandle );
 
     // Create the command line task
     xCLIStart( (void * const)&xCLIInterface, NULL );

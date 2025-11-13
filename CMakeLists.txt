@@ -101,10 +101,6 @@ set(UART_WD_TICK_US 450)               # Tick time for DMA watchdog[us] (default
 set(UART_WD_SILENCE_TICKS 4)           # The number of ticks to consider silence (default: 4)
 set(CPU_RUN_TIME_BASE_US 500)          # Task running time statistics time-base[us] (default: 500)
 
-set(USE_DRIVER_ST7789_FONT 1)          # st7789 ascii font use
-set(USE_ST7789_RESET_PIN 0)            # st7789 reset pin use
-set(ST7789_BUFFER_SIZE 4096)           # st7789 buffer size (default: 4096)
-
 # add subdirectory.
 add_subdirectory(main)                      # main
 add_subdirectory(app)                       # applocation
@@ -113,7 +109,6 @@ add_subdirectory(components/freertos)       # operation system
 add_subdirectory(components/log.c)          # log
 add_subdirectory(components/bsp)            # board support package
 add_subdirectory(lib/UartDmaDriver)         # UartDmaDriver
-add_subdirectory(components/st7789)         # st7789 driver
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(rp2350 1)
@@ -134,7 +129,6 @@ target_link_libraries(rp2350 PRIVATE
         UartDmaDriver   # UartDmaDriver
         pico_unique_id  # unique id
         pico_rand       # random
-        st7789          # st7789 driver
         # tinyusb_device  # tinyusb
         # tinyusb_board
         )

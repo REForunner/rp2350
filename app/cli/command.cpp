@@ -520,7 +520,7 @@ static BaseType_t prvLCD( char * pcWriteBuffer,
 
     /* Extract the address */
     UBaseType_t ulAddressStart = (UBaseType_t)strtoul(pcParameter, &ptr, ucNumberBase);
-
+    ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "0x%x", ulAddressStart);
     BaseType_t xResult = xTaskNotify( xLCDHandle, ulAddressStart, eSetValueWithOverwrite );
 
     /* There is no more data to return after this single string, so return
