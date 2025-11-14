@@ -188,6 +188,8 @@ static inline void vlcd_put_cmdAnddata(PIO pio, uint sm, uint8_t cmd, uint32_t *
     {
         /* no cmd param(data), sm return start */
         vlcd_sm_return_when32DataBit(pio, sm);
+        /* exit */
+        return;
     }
     else
     {
@@ -196,22 +198,38 @@ static inline void vlcd_put_cmdAnddata(PIO pio, uint sm, uint8_t cmd, uint32_t *
     }
     /* 3. send data */
     int i = 0;
+    int count = bytes / sizeof(uint32_t);
     int remain = bytes % sizeof(uint32_t);
-    for( ; i < bytes / sizeof(uint32_t); i++)
+    /* 32-bit send */
+    if(0 != count)
     {
-        /* put param(data) */
-        vlcd_put32(pio, sm, data[i]);
+        for( ; i < count; i++)
+        {
+            /* put param(data) */
+            vlcd_put32(pio, sm, data[0]);
+            /* step-by-step */
+            data += 1;
+        }
     }
     /* based on whether 32-bit alignment processing is performed */
     /* non-aligned on 32-bit */
     if(0 != remain)
     {
         /* 4. handling the remaining bytes */
-        uint8_t * redata = (uint8_t *)&(data[i]);
-        for(int m = 0; m < remain; m++)
+        /* 4.1 16-bit format first */
+        if(remain >= 2)
         {
-            /* put remaining bytes */
-            vlcd_put8(pio, sm, redata[m]);  // ?????
+            /* put remaining 16-bit */
+            vlcd_put16(pio, sm, *(uint16_t *)data);  // ?????
+            /* remaining bytes */
+            remain -= 2;
+            data += 2;
+        }
+        /* 4.2 the last byte */
+        if(0 != remain)
+        {
+            /* put remaining 8-bit */
+            vlcd_put8(pio, sm, data[0]);  // ?????
         }
         /* non-aligned autoregression */
     }
@@ -221,7 +239,9 @@ static inline void vlcd_put_cmdAnddata(PIO pio, uint sm, uint8_t cmd, uint32_t *
         /* 5. determine whether manual regression is required */
         /* sm return start */
         vlcd_sm_return_when32DataBit(pio, sm);
-    }    
+        /* exit */
+        // return;
+    }
 }
 
 

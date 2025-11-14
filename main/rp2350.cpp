@@ -8,7 +8,17 @@
 
 
 // lcd driver
-lcd_t xLCDdriver = { .pio = LCD_PIO, .SidePinBase = SPI_LCD_DC_PIN, .OutPin = SPI_MOSI_PIN, .BackLightPin = SPI_LCD_BL_PIN, .div = LCD_PIO_CLK_DIV };
+lcd_t xLCDdriver = 
+{ 
+    .pio = LCD_PIO,                 /* default pio */
+    .SidePinBase = SPI_LCD_DC_PIN,  /* side-set pin base gpui number */
+    .OutPin = SPI_MOSI_PIN,         /* out pin base gpio mumber */
+    .BackLightPin = SPI_LCD_BL_PIN, /* back light control gpio */
+    .div = LCD_PIO_CLK_DIV,         /* pio Frequency division (current 1.0f = 75MHz) */
+    .dir = SCREEN_DISPLAY_DIR_DEF,  /* display default direction */
+    .width = SCREEN_WIDTH,
+    .height = SCREEN_HEIGHT 
+};
 // lcd task handle
 TaskHandle_t xLCDHandle = NULL;
 // record psram size

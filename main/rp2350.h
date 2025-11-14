@@ -45,13 +45,28 @@ extern "C" {
 #endif // (__STDC_VERSION__ >= 201112L)
 
 
+/* lcd default display direction */
+#define SCREEN_DISPLAY_DIR_DEF      Horizontal
 /* colour gamut */
-#define COLOUR_GAMUT    2
+#define SCREEN_COLOUR_GAMUT         565
+
+#if (SCREEN_COLOUR_GAMUT == 444)
+    #define COLOUR_GAMUT_BYTES      2
+#elif (SCREEN_COLOUR_GAMUT == 565)
+    #define COLOUR_GAMUT_BYTES      2
+#elif (SCREEN_COLOUR_GAMUT == 666)
+    #define COLOUR_GAMUT_BYTES      4
+#elif (SCREEN_COLOUR_GAMUT == 888)
+    #define COLOUR_GAMUT_BYTES      4
+#else
+    #error "Please select a color format!!!"
+#endif
+
 /* Screen pixel size */
 #define SCREEN_WIDTH    240
 #define SCREEN_HEIGHT   135
 /* screen total buffer size */
-#define SCREEN_TOTAL_BUFFER_SIZE    (SCREEN_WIDTH * SCREEN_HEIGHT * COLOUR_GAMUT)
+#define SCREEN_TOTAL_BUFFER_SIZE    (SCREEN_WIDTH * SCREEN_HEIGHT * COLOUR_GAMUT_BYTES)
 
 
 /* Used for LCD and SD Card */
@@ -97,7 +112,7 @@ extern "C" {
 
 // PIO config
 #define LCD_PIO                     0
-#define LCD_PIO_CLK_DIV             1.0f
+#define LCD_PIO_CLK_DIV             10.0f
 #define LCD_PROBE_SIDE_PIN_BASE     SPI_LCD_DC_PIN                 // gpio 8
 #define LCD_PROBE_PIN_DC            (LCD_PROBE_SIDE_PIN_BASE + 0)  // gpio 8
 #define LCD_PROBE_PIN_CS            (LCD_PROBE_SIDE_PIN_BASE + 1)  // gpio 9
