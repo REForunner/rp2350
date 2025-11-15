@@ -205,6 +205,7 @@ static inline void vlcd_put_cmdAnddata(PIO pio, uint sm, uint8_t cmd, uint32_t *
     {
         for( ; i < count; i++)
         {
+            sleep_ms(10);
             /* put param(data) */
             vlcd_put32(pio, sm, data[0]);
             /* step-by-step */

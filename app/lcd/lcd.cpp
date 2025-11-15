@@ -106,8 +106,8 @@ static void prvLCDSetDefaultHeighWitdhBaseDir(lcd_t * px, displaydir_t eDir)
 /// @param eScan : scan direction
 static void prvLCDSetScanDir(lcd_t * px, scandir_t eScan)
 {
-    uint8_t regval;
-    uint16_t temp;
+    uint8_t regval = 0;
+    uint16_t temp = 0;
     // Based on the scanning direction, obtain the command parameters
     switch (eScan)
     {
@@ -141,10 +141,10 @@ static void prvLCDSetScanDir(lcd_t * px, scandir_t eScan)
     }
     // send data, msb first
     vlcd_put_cmdAnddata(PIO_INSTANCE(px->pio), px->sm, 0x36, (uint32_t *)&regval, 1U);
-    // switch width and height
+    // // switch width and height
     if(regval & 0x20)
     {
-        if (px->width < px->height)   /* 交换X,Y */
+        if (px->width < px->height)   /* switch X, Y */
         {
             temp = px->width;
             px->width = px->height;
@@ -153,7 +153,7 @@ static void prvLCDSetScanDir(lcd_t * px, scandir_t eScan)
     }
     else
     {
-        if (px->width > px->height)   /* 交换X,Y */
+        if (px->width > px->height)   /* switch X, Y */
         {
             temp = px->width;
             px->width = px->height;
@@ -172,46 +172,41 @@ void vLCDSetWindow(lcd_t * px, uint16_t xstar, uint16_t xend, uint16_t ystar, ui
 {
     uint32_t address_x;
     uint32_t address_y;
-    /* Landscape Mode */
-    if (px->dir == Horizontal)                  
+    /* in Horizontal mode */
+    if(px->dir == Horizontal)
     {
-        uint8_t * databuf = (uint8_t *)&address_x;
-        databuf[3] = (xstar + 40) >> 8;
-        databuf[2] = 0xFF & (xstar + 40);
-        databuf[1] = (xend + 40) >> 8;
-        databuf[0] = 0xFF & (xend + 40);
-        
-        databuf = (uint8_t *)&address_y;
-        databuf[3] = (ystar + 52) >> 8;
-        databuf[2] = 0xFF & (ystar + 52);
-        databuf[1] = (yend + 52) >> 8;
-        databuf[0] = 0xFF & (yend + 52);
+        uint16_t * databuf = (uint16_t *)&address_x;
+        /* Calculate the starting address of x */
+        databuf[1] = xstar + (uint16_t)ST7789_OFFSET_X_W_Hor;
+        databuf[0] = xend + (uint16_t)ST7789_OFFSET_X_W_Hor;
+        /* Calculate the starting address of y */
+        databuf = (uint16_t *)&address_y;
+        databuf[1] = ystar + (uint16_t)ST7789_OFFSET_Y_H_Hor;
+        databuf[0] = yend + (uint16_t)ST7789_OFFSET_Y_H_Hor;
     }
-    /* Portrait Mode */
+    /* in Vertical mode */
     else
     {
-        uint8_t * databuf = (uint8_t *)&address_x;
-        databuf[3] = (xstar + 52) >> 8;
-        databuf[2] = 0xFF & (xstar + 52);
-        databuf[1] = (xend + 52) >> 8;
-        databuf[0] = 0xFF & (xend + 52);
-        
-        databuf = (uint8_t *)&address_y;
-        databuf[3] = (ystar + 40) >> 8;
-        databuf[2] = 0xFF & (ystar + 40);
-        databuf[1] = (yend + 40) >> 8;
-        databuf[0] = 0xFF & (yend + 40);
+        uint16_t * databuf = (uint16_t *)&address_x;
+        /* Calculate the starting address of x */
+        databuf[1] = xstar + (uint16_t)ST7789_OFFSET_X_W_Ver;
+        databuf[0] = xend + (uint16_t)ST7789_OFFSET_X_W_Ver;
+        /* Calculate the starting address of y */
+        databuf = (uint16_t *)&address_y;
+        databuf[1] = ystar + (uint16_t)ST7789_OFFSET_Y_H_Ver;
+        databuf[0] = yend + (uint16_t)ST7789_OFFSET_Y_H_Ver;
     }
+    
     // send x address
     vlcd_put_cmdAnddata(PIO_INSTANCE(px->pio), px->sm, 0x2A, &address_x, 4);
     // send y address
     vlcd_put_cmdAnddata(PIO_INSTANCE(px->pio), px->sm, 0x2B, &address_y, 4);
 }
 
-/// @brief 
-/// @param px 
-/// @param pul 
-/// @param ulBytes 
+/// @brief write st7789 gram
+/// @param px : lcd_t handle
+/// @param pul : written data pointer
+/// @param ulBytes : data bytes
 void vLCDWriteRAM(lcd_t * px, uint32_t * pul, uint32_t ulBytes)
 {
     vlcd_put_cmdAnddata(PIO_INSTANCE(px->pio), px->sm, 0x2C, pul, ulBytes);
@@ -243,12 +238,11 @@ void vLCDTask(void * pv)
     // config scan direction
     prvLCDSetScanDir(px, DFT_SCAN_DIR);
 
-    vLCDSetWindow(px, 0, px->width, 0, px->height);
 
     uint32_t * pul = (uint32_t *)pvPortCalloc(1, SCREEN_TOTAL_BUFFER_SIZE);
-
-    memset(pul, 0xff, SCREEN_TOTAL_BUFFER_SIZE);
-    vLCDWriteRAM(px, pul, SCREEN_TOTAL_BUFFER_SIZE);
+    LCD_BL_PIN_ON();
+    // memset(pul, 0xff, SCREEN_TOTAL_BUFFER_SIZE);
+    // vLCDWriteRAM(px, pul, SCREEN_TOTAL_BUFFER_SIZE);
 
     uint32_t ulReceivedValue;
     
@@ -256,8 +250,17 @@ void vLCDTask(void * pv)
     {
         /* Block to wait for other Task() to notify this task. */  
         xTaskNotifyWait( 0, ULONG_MAX, &ulReceivedValue, pdMS_TO_TICKS(portMAX_DELAY) );
+        prvLCDSetScanDir(px, (scandir_t)ulReceivedValue);
+
+        xTaskNotifyWait( 0, ULONG_MAX, &ulReceivedValue, pdMS_TO_TICKS(portMAX_DELAY) );
+        uint16_t wx = ((uint16_t *)&ulReceivedValue)[0];
+        uint16_t hy = ((uint16_t *)&ulReceivedValue)[1];
+        vLCDSetWindow(px, 0, wx - 1, 0, hy - 1);
+        
+        xTaskNotifyWait( 0, ULONG_MAX, &ulReceivedValue, pdMS_TO_TICKS(portMAX_DELAY) );
         /* give a vlue to pio sm */
-        vlcd_put32(pio, sm, ulReceivedValue);
+        memset(pul, ulReceivedValue, SCREEN_TOTAL_BUFFER_SIZE);
+        vLCDWriteRAM(px, pul, wx * hy * 2);
         /* wait pio sm idle */
         vlcd_wait_idle(pio, sm);
     }
