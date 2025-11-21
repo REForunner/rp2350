@@ -78,6 +78,15 @@ include(pico_sdk_import.cmake)
 
 project(rp2350 C CXX ASM)
 
+set(PICO_DEFAULT_LED_PIN 3)
+# OPT_OS_NONE       1  ///< No RTOS
+# OPT_OS_FREERTOS   2  ///< FreeRTOS
+# OPT_OS_MYNEWT     3  ///< Mynewt OS
+# OPT_OS_CUSTOM     4  ///< Custom OS is implemented by application
+# OPT_OS_PICO       5  ///< Raspberry Pi Pico SDK
+# OPT_OS_RTTHREAD   6  ///< RT-Thread
+# OPT_OS_RTX4       7  ///< Keil RTX 4
+set(TINYUSB_OPT_OS OPT_OS_FREERTOS)     
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
@@ -93,12 +102,6 @@ pico_set_program_version(rp2350 "0.1")
 
 # set uart parameter
 # Optional: Configure driver parameters before adding subdirectory
-set(UART_RX_MAX_BAUDRATE 921600)       # Max baudrate (default: 921600)
-set(UART_DMA_RING_BITS 14)             # DMA buffer size 2^13=16384 bytes (default: 11)
-set(UART_RX_MAX_EVT_DATA_SIZE 1024)    # Max event data size (default: 256)
-set(UART_TX_BUFFER_SIZE 1024)          # TX buffer size (default: 256)
-set(UART_WD_TICK_US 450)               # Tick time for DMA watchdog[us] (default: 450)
-set(UART_WD_SILENCE_TICKS 4)           # The number of ticks to consider silence (default: 4)
 set(CPU_RUN_TIME_BASE_US 500)          # Task running time statistics time-base[us] (default: 500)
 
 # add subdirectory.
@@ -106,13 +109,11 @@ add_subdirectory(main)                      # main
 add_subdirectory(app)                       # applocation
 add_subdirectory(components/sparkfun_pico)  # psram
 add_subdirectory(components/freertos)       # operation system
-add_subdirectory(components/log.c)          # log
 add_subdirectory(components/bsp)            # board support package
-add_subdirectory(lib/UartDmaDriver)         # UartDmaDriver
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(rp2350 1)
-pico_enable_stdio_usb(rp2350 0)
+pico_enable_stdio_uart(rp2350 0)
+pico_enable_stdio_usb(rp2350 1)
 
 # Add the standard library to the build
 target_link_libraries(rp2350 PRIVATE
@@ -124,13 +125,11 @@ target_link_libraries(rp2350 PRIVATE
         app             # applocation
         sparkfun_pico   # psram
         freertos        # freertos-kernel
-        log             # log.c
         bsp             # board support package
-        UartDmaDriver   # UartDmaDriver
         pico_unique_id  # unique id
         pico_rand       # random
-        # tinyusb_device  # tinyusb
-        # tinyusb_board
+        tinyusb_device  # tinyusb
+        tinyusb_board
         )
 
 # Add the standard include files to the build
@@ -139,4 +138,3 @@ target_include_directories(rp2350 PRIVATE
 )
 
 pico_add_extra_outputs(rp2350)
-

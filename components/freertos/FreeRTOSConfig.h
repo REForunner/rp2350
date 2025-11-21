@@ -75,7 +75,7 @@
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         1  // Set to 1
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (256 * 1024)
+#define configTOTAL_HEAP_SIZE                   (128 * 1024)
 #define configAPPLICATION_ALLOCATED_HEAP        1
 #define configENABLE_HEAP_PROTECTOR             1
 
@@ -132,7 +132,7 @@ extern volatile uint32_t ulHighFrequencyTimerTicks;
 /* Define the sizes and usage. */
 #define configTICK_RATE_HZ                      1000
 #define configMAX_TASK_NAME_LEN                 16
-#define configMINIMAL_STACK_SIZE                128
+#define configMINIMAL_STACK_SIZE                256
 #define configUSE_16_BIT_TICKS                  0
 
 /* Mutexes */

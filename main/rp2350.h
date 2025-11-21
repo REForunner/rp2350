@@ -12,11 +12,9 @@
 #include "sfe_psram.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "log.h"
 #include "hardware/dma.h"
 #include "bsp.h"
 #include "psram.h"
-#include "UartDmaDriver.hpp"
 #include <cstdio>
 #include <algorithm>
 #include "pico/unique_id.h"
@@ -26,6 +24,9 @@
 #include "hardware/pio.h"
 #include "rp2350.pio.h"
 #include "lcd/lcd.hpp"
+#include <tusb.h>
+#include "pico/multicore.h"
+#include "stream_buffer.h"
 
 
 #ifdef __cplusplus
@@ -126,6 +127,9 @@ extern "C" {
 #define UART_CLI_RX_PIN     PICO_DEFAULT_UART_RX_PIN
 #define UART_CLIBAUD_RATE   115200
 
+
+// core number
+#define CORE_NUMBER(num)    (1 << num)
 
 // record psram size
 extern size_t xPsramSize;

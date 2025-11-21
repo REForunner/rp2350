@@ -66,6 +66,7 @@ typedef struct lcd_t
     // pio hardware information
     uint const pio;
     uint sm;
+    int dmaChannel;
     uint const SidePinBase;
     uint const OutPin;
     uint const BackLightPin;

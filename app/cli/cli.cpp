@@ -173,8 +173,9 @@ static void prvCommandConsoleTask( void * pvParameters )
 /// @brief create cli task
 /// @param pvParameters : read and write interaction
 /// @param pxCreatedTask ： task handle
+/// @param uxPriority ： task priority
 /// @return the resualt of Task creation
-BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedTask )
+BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedTask, UBaseType_t uxPriority )
 {
     // check param
     if(nullptr == pvParameters)
@@ -188,10 +189,10 @@ BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedT
 
     /* Create that task that handles the console itself. */
     return xTaskCreate( prvCommandConsoleTask,     /* The task that implements the command console. */
-                        "cli",                     /* Text name assigned to the task.  This is just to assist debugging.  The kernel does not use this name itself. */
-                        3072U,                     /* The size of the stack allocated to the task. 3K * 4B = 12K */
+                        CLI_TASK_NAME,             /* Text name assigned to the task.  This is just to assist debugging.  The kernel does not use this name itself. */
+                        CLI_TASK_STACK_SIZE,       /* The size of the stack allocated to the task. 3K * 4B = 12K */
                         pvParameters,
-                        configTIMER_TASK_PRIORITY - 1,  /* Only one level lower in priority than timer task */
+                        uxPriority,
                         pxCreatedTask );
 }
 

@@ -20,6 +20,13 @@
 
 /*-----------------------------------------------------------*/
 
+/* command task name */
+#define CLI_TASK_NAME           "cli"
+/* command task stack size(32-bit word) */
+#define CLI_TASK_STACK_SIZE     3072U
+
+/*-----------------------------------------------------------*/
+
 /* Prototype of data interaction function */
 typedef int (* DataInteraction_t)(uint8_t *, int);
 
@@ -33,11 +40,13 @@ typedef struct cli_t
 
 /*-----------------------------------------------------------*/
 
+/* Create that task that handles the console itself. */
 /// @brief create cli task
 /// @param pvParameters : read and write interaction
 /// @param pxCreatedTask ： task handle
+/// @param uxPriority ： task priority
 /// @return the resualt of Task creation
-BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedTask );
+BaseType_t xCLIStart( void * const pvParameters, TaskHandle_t * const pxCreatedTask, UBaseType_t uxPriority );
 
 
 /*-----------------------------------------------------------*/
