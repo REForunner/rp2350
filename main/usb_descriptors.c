@@ -5,16 +5,21 @@
  */
 
 #include <tusb.h>
-#include <bsp/board_api.h>
+#include "serial.h"
+#include "dap/DAP.h"
 
 // set some example Vendor and Product ID
 // the board will use to identify at the host
 #define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define CDC_EXAMPLE_VID     0xCafe
+#define CDC_EXAMPLE_VID     0x2E8A
 // use _PID_MAP to generate unique PID for each interface
-#define CDC_EXAMPLE_PID     (0x4000 | _PID_MAP(CDC, 0))
+#define CDC_EXAMPLE_PID     ( 0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )
 // set USB 2.0
 #define CDC_EXAMPLE_BCD     0x0200
+
+//--------------------------------------------------------------------+
+// Device Descriptors
+//--------------------------------------------------------------------+
 
 // defines a descriptor that will be communicated to the host
 tusb_desc_device_t const desc_device = {
@@ -42,16 +47,37 @@ tusb_desc_device_t const desc_device = {
 // called when host requests to get device descriptor
 uint8_t const *tud_descriptor_device_cb(void);
 
+//--------------------------------------------------------------------+
+// HID Report Descriptor
+//--------------------------------------------------------------------+
+
+uint8_t const desc_hid_report[] = {
+        TUD_HID_REPORT_DESC_GENERIC_INOUT(CFG_TUD_HID_EP_BUFSIZE)
+};
+
+// Invoked when received GET HID REPORT DESCRIPTOR
+// Application return pointer to descriptor
+// Descriptor contents must exist long enough for transfer to complete
+uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance) {
+    (void) instance;
+    return desc_hid_report;
+}
+
+//--------------------------------------------------------------------+
+// Configuration Descriptor
+//--------------------------------------------------------------------+
+
 enum {
     ITF_NUM_CDC_0 = 0,
     ITF_NUM_CDC_0_DATA,
     ITF_NUM_CDC_1,
     ITF_NUM_CDC_1_DATA,
+    ITF_NUM_HID,
     ITF_NUM_TOTAL
 };
 
 // total length of configuration descriptor
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN)
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN + TUD_HID_INOUT_DESC_LEN )
 
 // define endpoint numbers
 #define EPNUM_CDC_0_NOTIF   0x81 // notification endpoint for CDC 0
@@ -61,6 +87,9 @@ enum {
 #define EPNUM_CDC_1_NOTIF   0x84 // notification endpoint for CDC 1
 #define EPNUM_CDC_1_OUT     0x05 // out endpoint for CDC 1
 #define EPNUM_CDC_1_IN      0x85 // in endpoint for CDC 1
+
+#define EPNUM_HID_OUT       0x83
+#define EPNUM_HID_IN        0x03
 
 // configure descriptor (for 2 CDC interfaces)
 uint8_t const desc_configuration[] = {
@@ -73,9 +102,19 @@ uint8_t const desc_configuration[] = {
     //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0_DATA, 4, 0x01, 0x02),
 
     // CDC 1: Communication Interface - TODO: get 64 from tusb_config.h
-    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 4, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 5, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
     // CDC 1: Data Interface
     //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1_DATA, 4, 0x03, 0x04),
+
+    // HID Interface
+    // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
+    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, 6, HID_ITF_PROTOCOL_NONE,
+                sizeof(desc_hid_report),
+                EPNUM_HID_IN,
+                EPNUM_HID_OUT,
+                CFG_TUD_HID_EP_BUFSIZE,
+                1
+        ),
 };
 
 // called when host requests to get configuration descriptor
@@ -117,9 +156,10 @@ char const *string_desc_arr[] = {
     "Raspberry Pi",                 // 1: Manufacturer
     "Pico (2)",                     // 2: Product
     NULL,                           // 3: Serials (null so it uses unique ID if available)
-    "Pico SDK stdio"                // 4: CDC Interface 0
-    "Custom CDC",                   // 5: CDC Interface 1,
-    "RPiReset"                      // 6: Reset Interface
+    "Pico SDK stdio",               // 4: CDC Interface 0
+    "Custom CDC",                   // 5: CDC Interface 1
+    "#HID CMSIS-DAP v" DAP_FW_VER,  // 6: HID Interface
+    "RPiReset"                      // 7: Reset Interface
 };
 
 // buffer to hold the string descriptor during the request | plus 1 for the null terminator
@@ -165,7 +205,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
         case STRID_SERIAL:
             // try to read the serial from the board
-            char_count = board_usb_get_serial(_desc_str + 1, 32);
+            char_count = usb_get_serial(_desc_str + 1, 32);
             break;
 
         default:

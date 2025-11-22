@@ -28,7 +28,7 @@
 
 /* CPU / FPU / TrustZone */
 #if defined(PICO_RP2350)
-  #define configCPU_CLOCK_HZ              150000000
+  #define configCPU_CLOCK_HZ              (clock_get_hz(clk_sys))
   #define configENABLE_TRUSTZONE          0
   #define configENABLE_MPU                0
   #define configENABLE_FPU                1

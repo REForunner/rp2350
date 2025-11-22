@@ -538,3 +538,37 @@ commandREGISTER static const CLI_Command_Definition_t xLCD =
 };
 
 /*-----------------------------------------------------------*/
+
+/*
+ * Implements the clock command.
+ */
+static BaseType_t prvClock( char * pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char * pcCommandString )
+{
+    /* Remove compile time warnings about unused parameters, and check the
+        * write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+        * write buffer length is adequate, so does not check for buffer overflows. */
+    ( void ) pcCommandString;
+    configASSERT( pcWriteBuffer );
+
+    /* clear write buffer */
+    memset( pcWriteBuffer, 0x00, xWriteBufferLen );
+
+    ( void ) snprintf(pcWriteBuffer + strlen( pcWriteBuffer ), xWriteBufferLen - strlen(pcWriteBuffer), "%d MHz\r\n", (clock_get_hz(clk_sys)));
+
+    /* There is no more data to return after this single string, so return
+     * pdFALSE. */
+    return pdFALSE;
+}
+
+/* Structure that defines the "lcd" command line command. */
+commandREGISTER static const CLI_Command_Definition_t xClock =
+{
+    "clock",
+    "\r\nclock:\r\n Displays the cpu frequency of the current.\r\n",
+    prvClock,     /* The function to run. */
+    0                   /* The user can enter any number of commands. */
+};
+
+/*-----------------------------------------------------------*/

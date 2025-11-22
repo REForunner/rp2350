@@ -27,6 +27,7 @@
 #include <tusb.h>
 #include "pico/multicore.h"
 #include "stream_buffer.h"
+#include "dap/DAP.h"
 
 
 #ifdef __cplusplus

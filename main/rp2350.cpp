@@ -134,14 +134,12 @@ void tud_cdc_rx_cb(uint8_t itf)
 // entry
 int main(void)
 {
-    // Initialize TinyUSB stack
-    tusb_init();
-
-    // let pico sdk use the first cdc interface for std io
-    stdio_init_all();
-
     // get unique id and format it
     vSerialInit();
+    // Initialize TinyUSB stack
+    tusb_init();
+    // let pico sdk use the first cdc interface for std io
+    stdio_init_all();
 
 #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) )
     // creat a repeating timer that used by cpu time statistics
@@ -175,7 +173,7 @@ int main(void)
 
     // usb thread
     xTaskCreateAffinitySet(prvusbThread, "tud", 4096UL, NULL, 15, CORE_NUMBER(0), NULL);
-    xTaskCreate(prvcdc, "cdc", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+    // xTaskCreate(prvcdc, "cdc", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
     // Create the command line task
     xCLIStart( (void * const)&xCLIInterface, NULL, 3 );
@@ -194,3 +192,55 @@ int main(void)
 }
 
 /*-----------------------------------------------------------*/
+
+//--------------------------------------------------------------------+
+// Device callbacks
+//--------------------------------------------------------------------+
+
+// Invoked when device is mounted
+void tud_mount_cb(void) 
+{
+
+}
+
+// Invoked when device is unmounted
+void tud_umount_cb(void) 
+{
+
+}
+
+// Invoked when usb bus is suspended
+// remote_wakeup_en : if host allow us  to perform remote wakeup
+void tud_suspend_cb(bool remote_wakeup_en) 
+{
+
+}
+
+// Invoked when usb bus is resumed
+void tud_resume_cb(void) 
+{
+
+}
+
+//--------------------------------------------------------------------+
+// USB HID
+//--------------------------------------------------------------------+
+// Invoked when received GET_REPORT control request
+// Application must fill buffer report's content and return its length.
+// Return zero will cause the stack to STALL request
+uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) 
+{
+    return 0;
+}
+
+// Invoked when received SET_REPORT control request or
+// received data on OUT endpoint ( Report ID = 0, Type = 0 )
+void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *RxDataBuffer, uint16_t bufsize) 
+{
+    static uint8_t TxDataBuffer[CFG_TUD_HID_EP_BUFSIZE];
+    uint32_t response_size = TU_MIN(CFG_TUD_HID_EP_BUFSIZE, bufsize);
+
+    DAP_ExecuteCommand(RxDataBuffer, TxDataBuffer);
+
+    tud_hid_report(0, TxDataBuffer, response_size);
+}
