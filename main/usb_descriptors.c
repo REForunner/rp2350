@@ -66,6 +66,17 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance) {
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
+// String descriptors referenced with .i... in the descriptor tables
+
+enum {
+    STRID_LANGID = 0,   // 0: supported language ID
+    STRID_MANUFACTURER, // 1: Manufacturer
+    STRID_PRODUCT,      // 2: Product
+    STRID_SERIAL,       // 3: Serials
+    STRID_CDC_0,        // 4: CDC Interface 0
+    STRID_CDC_1,        // 5: CDC Interface 1
+    STRID_HID,          // 6: HID Interface
+};
 
 enum {
     ITF_NUM_CDC_0 = 0,
@@ -88,33 +99,27 @@ enum {
 #define EPNUM_CDC_1_OUT     0x05 // out endpoint for CDC 1
 #define EPNUM_CDC_1_IN      0x85 // in endpoint for CDC 1
 
-#define EPNUM_HID_OUT       0x83
-#define EPNUM_HID_IN        0x03
+#define EPNUM_HID_OUT       0x86
+#define EPNUM_HID_IN        0x06
 
 // configure descriptor (for 2 CDC interfaces)
 uint8_t const desc_configuration[] = {
     // config descriptor | how much power in mA, count of interfaces, ...
-    TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x80, 100),
+    TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, STRID_LANGID, CONFIG_TOTAL_LEN, 0x80, 100),
 
     // CDC 0: Communication Interface - TODO: get 64 from tusb_config.h
-    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, STRID_CDC_0, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
     // CDC 0: Data Interface
     //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0_DATA, 4, 0x01, 0x02),
 
     // CDC 1: Communication Interface - TODO: get 64 from tusb_config.h
-    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 5, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, STRID_CDC_1, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
     // CDC 1: Data Interface
     //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1_DATA, 4, 0x03, 0x04),
 
     // HID Interface
     // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, 6, HID_ITF_PROTOCOL_NONE,
-                sizeof(desc_hid_report),
-                EPNUM_HID_IN,
-                EPNUM_HID_OUT,
-                CFG_TUD_HID_EP_BUFSIZE,
-                1
-        ),
+    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, STRID_HID, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID_IN, EPNUM_HID_OUT, CFG_TUD_HID_EP_BUFSIZE, 1),
 };
 
 // called when host requests to get configuration descriptor
@@ -137,17 +142,6 @@ tusb_desc_device_qualifier_t const desc_device_qualifier = {
 
 // called when host requests to get device qualifier descriptor
 uint8_t const* tud_descriptor_device_qualifier_cb(void);
-
-// String descriptors referenced with .i... in the descriptor tables
-
-enum {
-    STRID_LANGID = 0,   // 0: supported language ID
-    STRID_MANUFACTURER, // 1: Manufacturer
-    STRID_PRODUCT,      // 2: Product
-    STRID_SERIAL,       // 3: Serials
-    STRID_CDC_0,        // 4: CDC Interface 0
-    STRID_CDC_1,        // 5: CDC Interface 1
-};
 
 // array of pointer to string descriptors
 char const *string_desc_arr[] = {

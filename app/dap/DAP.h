@@ -322,21 +322,53 @@ extern unsigned int DAP_ExecuteCommand       (const uint8_t *request, uint8_t *r
 extern void     DAP_Setup (void);
 
 // Configurable delay for clock generation
+// #define DELAY_SLOW_CYCLES       3U      // Number of cycles for one iteration
+// #define DELAY_FAST_CYCLES       2U      // Number of cycles: 0..3
+
+// #define PIN_DELAY_SLOW(delay) do{\
+//                                   while (--delay)\
+//                                   {\
+//                                     for(int i = 0; i < 5000; i++)\
+//                                     {\
+//                                       \
+//                                     }\
+//                                   }\
+//                                 }while(0);
+
+#ifndef DELAY_SLOW_CYCLES
 #define DELAY_SLOW_CYCLES       3U      // Number of cycles for one iteration
-#define DELAY_FAST_CYCLES       2U      // Number of cycles: 0..3
+#endif
+#if defined(__CC_ARM)
+static inline void PIN_DELAY_SLOW (uint32_t delay) {
+  uint32_t count = delay;
+  while (--count);
+}
+#else
+static inline void PIN_DELAY_SLOW(uint32_t delay) {
+    uint32_t count = delay / 2;
+    while (--count){
+        asm volatile ("nop");
+    }
+}
+#endif
 
-#define PIN_DELAY_SLOW(delay) do{\
-                                  while (--delay)\
-                                  {\
-                                    for(int i = 0; i < 5000; i++)\
-                                    {\
-                                      \
-                                    }\
-                                  }\
-                                }while(0);
+// // Fixed delay for fast clock generation
+// #define PIN_DELAY_FAST()  do{}while(0);
 
-// Fixed delay for fast clock generation
-#define PIN_DELAY_FAST()  do{}while(0);
+#ifndef DELAY_FAST_CYCLES
+#define DELAY_FAST_CYCLES       3U      // Number of cycles: 0..3
+#endif
+static inline void PIN_DELAY_FAST(void) {
+#if (DELAY_FAST_CYCLES >= 1U)
+    asm volatile ("nop");
+#endif
+#if (DELAY_FAST_CYCLES >= 2U)
+    asm volatile ("nop");
+#endif
+#if (DELAY_FAST_CYCLES >= 3U)
+    asm volatile ("nop");
+#endif
+}
 
 #ifdef  __cplusplus
 }

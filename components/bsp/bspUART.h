@@ -2,7 +2,6 @@
 #define BSP_UART_H_
 
 #include "bsp.h"
-#include <algorithm>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "stream_buffer.h"

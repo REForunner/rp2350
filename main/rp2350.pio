@@ -80,6 +80,7 @@ static_assert(sizeof(pio_lcd_data_bits_t) == sizeof(uint32_t), "pio_lcd_data_bit
 /// @return state machine number
 static inline uint ullcd_program_init(PIO pio, uint SidePinBase, uint OutPin, float div)
 {
+#if 0
     // Make the DC pin available to picotool
     bi_decl(bi_1pin_with_name(SidePinBase, "LCD DC"));
     // Make the CS pin available to picotool
@@ -88,7 +89,7 @@ static inline uint ullcd_program_init(PIO pio, uint SidePinBase, uint OutPin, fl
     bi_decl(bi_1pin_with_name(SidePinBase + 2, "LCD CLK"));
     // Make the MOSI pin available to picotool
     bi_decl(bi_1pin_with_name(OutPin, "LCD MOSI"));    
-
+#endif
     // get pio program offset
     uint pio_offset = pio_add_program(pio, &lcd_spi_program);
     // get idle state machine

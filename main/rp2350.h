@@ -15,8 +15,6 @@
 #include "hardware/dma.h"
 #include "bsp.h"
 #include "psram.h"
-#include <cstdio>
-#include <algorithm>
 #include "pico/unique_id.h"
 #include "FreeRTOS_CLI.h"
 #include "cli/cli.hpp"
@@ -27,7 +25,7 @@
 #include <tusb.h>
 #include "pico/multicore.h"
 #include "stream_buffer.h"
-#include "dap/DAP.h"
+#include "dap/dapTask.h"
 
 
 #ifdef __cplusplus
@@ -46,6 +44,10 @@ extern "C" {
     typedef char __attribute__((unused)) UNIQUE_STATIC_ASSERT_ID[(COND) ? 1 : -1]
 #endif // (__STDC_VERSION__ >= 201112L)
 
+
+/* swd pin */
+#define SWCLK_PIN   23
+#define SWDIO_PIN   22
 
 /* lcd default display direction */
 #define SCREEN_DISPLAY_DIR_DEF      Horizontal
@@ -114,7 +116,7 @@ extern "C" {
 
 // PIO config
 #define LCD_PIO                     0
-#define LCD_PIO_CLK_DIV             10.0f
+#define LCD_PIO_CLK_DIV             1.0f
 #define LCD_PROBE_SIDE_PIN_BASE     SPI_LCD_DC_PIN                 // gpio 8
 #define LCD_PROBE_PIN_DC            (LCD_PROBE_SIDE_PIN_BASE + 0)  // gpio 8
 #define LCD_PROBE_PIN_CS            (LCD_PROBE_SIDE_PIN_BASE + 1)  // gpio 9

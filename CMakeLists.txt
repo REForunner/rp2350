@@ -22,6 +22,7 @@ set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
+
 # ====================================================================================
 set(PICO_BOARD pico2 CACHE STRING "Board type")
 
@@ -114,6 +115,11 @@ add_subdirectory(components/bsp)            # board support package
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(rp2350 0)
 pico_enable_stdio_usb(rp2350 1)
+
+target_link_options(${PROJECT_NAME} PRIVATE
+    -Wl,-Map=${PROJECT_NAME}.map
+    -Wl,--print-memory-usage
+)
 
 # Add the standard library to the build
 target_link_libraries(rp2350 PRIVATE

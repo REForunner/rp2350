@@ -39,6 +39,8 @@ const HeapRegion_t xHeapRegions[] = {
 
 // stearm buffer used by cdc
 static StreamBufferHandle_t cdc_rx_streambuf[CFG_TUD_CDC];
+// stream buffer used by HID rx
+static StreamBufferHandle_t hid_rx_streambuf;
 
 /*-----------------------------------------------------------*/
 
@@ -49,13 +51,15 @@ static StreamBufferHandle_t cdc_rx_streambuf[CFG_TUD_CDC];
 static int lCLIRead(uint8_t * puc, int lMaxSize) 
 {
     // receive data from steam-buffer
-    return (int)xStreamBufferReceive(cdc_rx_streambuf[CLI_USB_CDC_NUMBER], puc, lMaxSize, portMAX_DELAY);   
+    return (int)xStreamBufferReceive(cdc_rx_streambuf[CLI_USB_CDC_NUMBER], puc, lMaxSize, portMAX_DELAY);
 }
 static int lCLIWrite(uint8_t * puc, int lMaxSize) 
 { 
+    // vTaskSuspendAll(); // Suspend the scheduler to safely update the write index
     // use cdc 0
     tud_cdc_n_write(CLI_USB_CDC_NUMBER, (uint8_t const *)puc, lMaxSize);
     tud_cdc_n_write_flush(CLI_USB_CDC_NUMBER);
+    // xTaskResumeAll();
     return 0; 
 }
 
@@ -63,6 +67,29 @@ static const cli_t xCLIInterface =
 {
     .r = lCLIRead,
     .w = lCLIWrite,
+};
+
+/*-----------------------------------------------------------*/
+
+static int lDAP_Read(uint8_t * puc, int lMaxSize)
+{
+    // receive data from steam-buffer
+    return (int)xStreamBufferReceive(hid_rx_streambuf, puc, lMaxSize, portMAX_DELAY);
+}
+static int lDAP_Write(uint8_t * puc, int lMaxSize)
+{
+    // // Suspend the scheduler to safely update the write index
+    // vTaskSuspendAll();
+    // usb hid report 0
+    tud_hid_report(0, puc, (uint16_t)lMaxSize);
+    // xTaskResumeAll();
+    return 0; 
+}
+
+static const dap_t xDAP_Inf =
+{
+    .r = lDAP_Read,
+    .w = lDAP_Write,
 };
 
 /*-----------------------------------------------------------*/
@@ -161,19 +188,25 @@ int main(void)
     // Initialize heap5 and manage the defined memory areas
     // It must be called after the Initialise success is completed.
     vPortDefineHeapRegions(xHeapRegions);
+
+    // enable trace recorder
+    DAP_Setup();
+    /* Create that task that handles the console itself. */
+    // xTaskCreate( vLCDTask, "lcd", 1024U, (void *)&xLCDdriver, 2, &xLCDHandle );
+
     // creat steam-buffer, used by cdc
     for(int i = 0; i < CFG_TUD_CDC; i++)
     {
         cdc_rx_streambuf[i] = xStreamBufferCreate(CFG_TUD_CDC_RX_BUFSIZE, 1);
     }
-    // enable trace recorder
-        
-    /* Create that task that handles the console itself. */
-    // xTaskCreate( vLCDTask, "lcd", 1024U, (void *)&xLCDdriver, 2, &xLCDHandle );
-
     // usb thread
-    xTaskCreateAffinitySet(prvusbThread, "tud", 4096UL, NULL, 15, CORE_NUMBER(0), NULL);
+    xTaskCreateAffinitySet(prvusbThread, "tud", 4096UL, NULL, 14, CORE_NUMBER(0), NULL);
     // xTaskCreate(prvcdc, "cdc", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+    
+    // creat steam-buffer, used by hid rx
+    hid_rx_streambuf = xStreamBufferCreate(CFG_TUD_HID_EP_BUFSIZE, 1);
+    // daplink thread
+    xTaskCreate(vdapTask, "dap", 512, (void *)&xDAP_Inf, 5, NULL);
 
     // Create the command line task
     xCLIStart( (void * const)&xCLIInterface, NULL, 3 );
@@ -225,22 +258,29 @@ void tud_resume_cb(void)
 //--------------------------------------------------------------------+
 // USB HID
 //--------------------------------------------------------------------+
-// Invoked when received GET_REPORT control request
-// Application must fill buffer report's content and return its length.
-// Return zero will cause the stack to STALL request
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) 
+
+/* Invoked when received GET_REPORT control request
+ * Application must fill buffer report's content and return its length.
+ * Return zero will cause the stack to STALL request
+ */
+uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
 {
+    (void) itf;
+    (void) report_id;
+    (void) report_type;
+    (void) buffer;
+    (void) reqlen;
+
     return 0;
 }
 
-// Invoked when received SET_REPORT control request or
-// received data on OUT endpoint ( Report ID = 0, Type = 0 )
-void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *RxDataBuffer, uint16_t bufsize) 
+/* Invoked when received SET_REPORT control request or
+ * received data on OUT endpoint ( Report ID = 0, Type = 0 )
+ */
+void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
 {
-    static uint8_t TxDataBuffer[CFG_TUD_HID_EP_BUFSIZE];
+    (void) report_type;
+    
     uint32_t response_size = TU_MIN(CFG_TUD_HID_EP_BUFSIZE, bufsize);
-
-    DAP_ExecuteCommand(RxDataBuffer, TxDataBuffer);
-
-    tud_hid_report(0, TxDataBuffer, response_size);
+    xStreamBufferSend(hid_rx_streambuf, buffer, response_size, 0);
 }

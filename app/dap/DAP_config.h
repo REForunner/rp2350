@@ -30,6 +30,13 @@
 
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
+#include "tusb_config.h"
+#include "stdint.h"
+#include "hardware/gpio.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 //**************************************************************************************************
 /**
 \defgroup DAP_Config_Debug_gr CMSIS-DAP Debug Unit Information
@@ -47,7 +54,7 @@ This information includes:
 
 /// Processor Clock of the Cortex-M MCU used in the Debug Unit.
 /// This value is used to calculate the SWD/JTAG clock speed.
-#define CPU_CLOCK               (clock_get_hz(clk_sys))      ///< Specifies the CPU Clock in Hz.
+#define CPU_CLOCK               (150000000ULL)   ///< Specifies the CPU Clock in Hz.
 
 /// Number of processor cycles for I/O Port write operations.
 /// This value is used to calculate the SWD/JTAG clock speed that is generated with I/O
@@ -76,7 +83,7 @@ This information includes:
 /// Default communication speed on the Debug Access Port for SWD and JTAG mode.
 /// Used to initialize the default SWD/JTAG clock frequency.
 /// The command \ref DAP_SWJ_Clock can be used to overwrite this default setting.
-#define DAP_DEFAULT_SWJ_CLOCK   1000000U        ///< Default SWD/JTAG clock frequency in Hz.
+#define DAP_DEFAULT_SWJ_CLOCK   100000U         ///< Default SWD/JTAG clock frequency in Hz.
 
 /// Maximum Package Size for Command and Response data.
 /// This configuration settings is used to optimize the communication performance with the
@@ -111,7 +118,7 @@ This information includes:
 #define SWO_STREAM              0               ///< SWO Streaming Trace: 1 = available, 0 = not available.
 
 /// Clock frequency of the Test Domain Timer. Timer value is returned with \ref TIMESTAMP_GET.
-#define TIMESTAMP_CLOCK         100000000U      ///< Timestamp clock in Hz (0 = timestamps not supported).
+#define TIMESTAMP_CLOCK         0               ///< Timestamp clock in Hz (0 = timestamps not supported).
 
 /// Indicate that UART Communication Port is available.
 /// This information is returned by the command \ref DAP_Info as part of <b>Capabilities</b>.
@@ -256,6 +263,39 @@ static inline unsigned char DAP_GetProductFirmwareVersionString (char *str) {
 ///@}
 
 
+#define __STATIC_INLINE static inline
+#define __STATIC_FORCEINLINE static inline
+
+__STATIC_INLINE void pin_out_init(uint gpio) {
+    gpio_init(gpio);
+    gpio_set_dir(gpio, GPIO_OUT);
+}
+
+__STATIC_INLINE void pin_out_od_init(uint gpio) {
+    // not available
+}
+/**
+ * init gpio to input and with pull mode
+ * @param gpio gpio pin
+ * @param mode 0 is no pull, 1 is pull up, 2 is pull down
+ */
+__STATIC_INLINE void pin_in_init(uint gpio, uint8_t mode) {
+    if (mode == 1)
+        gpio_pull_up(gpio);
+    else if (mode == 2)
+        gpio_pull_down(gpio);
+    else
+        gpio_disable_pulls(gpio);
+    gpio_init(gpio);
+    gpio_set_dir(gpio, GPIO_IN);
+}
+
+#define PICO_LINK_SWCLK 24
+#define PICO_LINK_SWDIO 22
+
+#define PICO_LINK_SWCLK_MASK (1ul << PICO_LINK_SWCLK)
+#define PICO_LINK_SWDIO_MASK (1ul << PICO_LINK_SWDIO)
+
 //**************************************************************************************************
 /**
 \defgroup DAP_Config_PortIO_gr CMSIS-DAP Hardware I/O Pin Access
@@ -309,7 +349,12 @@ Configures the DAP Hardware I/O pins for Serial Wire Debug (SWD) mode:
  - TDI, nTRST to HighZ mode (pins are unused in SWD mode).
 */
 static inline void PORT_SWD_SETUP (void) {
-
+    // Set SWCLK HIGH
+    pin_out_init(PICO_LINK_SWCLK);
+    gpio_put(PICO_LINK_SWCLK, 1);
+    // Set SWDIO HIGH
+    pin_out_init(PICO_LINK_SWDIO);
+    gpio_put(PICO_LINK_SWDIO, 1);
 }
 
 /** Disable JTAG/SWD I/O Pins.
@@ -317,7 +362,8 @@ Disables the DAP Hardware I/O pins which configures:
  - TCK/SWCLK, TMS/SWDIO, TDI, TDO, nTRST, nRESET to High-Z mode.
 */
 static inline void PORT_OFF (void) {
-
+    pin_in_init(PICO_LINK_SWDIO, 0);
+    pin_in_init(PICO_LINK_SWCLK, 0);
 }
 
 
@@ -327,59 +373,80 @@ static inline void PORT_OFF (void) {
 \return Current status of the SWCLK/TCK DAP hardware I/O pin.
 */
 static inline unsigned int PIN_SWCLK_TCK_IN  (void) {
-  
+    return (gpio_get_all() & PICO_LINK_SWCLK_MASK) != 0;
 }
 
 /** SWCLK/TCK I/O pin: Set Output to High.
 Set the SWCLK/TCK DAP hardware I/O pin to high level.
 */
 static inline void     PIN_SWCLK_TCK_SET (void) {
-  
+  gpio_set_mask(PICO_LINK_SWCLK_MASK);
 }
 
 /** SWCLK/TCK I/O pin: Set Output to Low.
 Set the SWCLK/TCK DAP hardware I/O pin to low level.
 */
 static inline void     PIN_SWCLK_TCK_CLR (void) {
-  
+  gpio_clr_mask(PICO_LINK_SWCLK_MASK);
 }
 
 
 // SWDIO/TMS Pin I/O --------------------------------------
 
+/**
+ * reinit swdio pin to in/out mode
+ * @param gpio gpio pin
+ * @param mode 0 is in, 1 is out
+ */
+static inline void PIN_SWDIO_TMS_Reinit(uint8_t mode) {
+    if (mode) {
+        // set swdio pin to output
+        gpio_set_pulls(PICO_LINK_SWDIO, false, false);
+        gpio_set_dir_out_masked(PICO_LINK_SWDIO_MASK);
+    } else {
+        // set swdio pin to input
+        gpio_set_pulls(PICO_LINK_SWDIO, true, false);
+        gpio_set_dir_in_masked(PICO_LINK_SWDIO_MASK);
+    }
+}
+
 /** SWDIO/TMS I/O pin: Get Input.
 \return Current status of the SWDIO/TMS DAP hardware I/O pin.
 */
 static inline unsigned int PIN_SWDIO_TMS_IN  (void) {
-  
+  return (gpio_get_all() & PICO_LINK_SWDIO_MASK) != 0;
 }
 
 /** SWDIO/TMS I/O pin: Set Output to High.
 Set the SWDIO/TMS DAP hardware I/O pin to high level.
 */
 static inline void     PIN_SWDIO_TMS_SET (void) {
-  
+  gpio_set_mask(PICO_LINK_SWDIO_MASK);
 }
 
 /** SWDIO/TMS I/O pin: Set Output to Low.
 Set the SWDIO/TMS DAP hardware I/O pin to low level.
 */
 static inline void     PIN_SWDIO_TMS_CLR (void) {
-  
+  gpio_clr_mask(PICO_LINK_SWDIO_MASK);
 }
 
 /** SWDIO I/O pin: Get Input (used in SWD mode only).
 \return Current status of the SWDIO DAP hardware I/O pin.
 */
 static inline unsigned int PIN_SWDIO_IN      (void) {
-  
+  return (gpio_get_all() & PICO_LINK_SWDIO_MASK) != 0;
 }
 
 /** SWDIO I/O pin: Set Output (used in SWD mode only).
 \param bit Output value for the SWDIO DAP hardware I/O pin.
 */
 static inline void     PIN_SWDIO_OUT     (unsigned int bit) {
-
+  if (bit & 1) {
+      gpio_set_mask(PICO_LINK_SWDIO_MASK);
+  } else {
+      gpio_clr_mask(PICO_LINK_SWDIO_MASK);
+  }
 }
 
 /** SWDIO I/O pin: Switch to Output mode (used in SWD mode only).
@@ -387,7 +454,8 @@ Configure the SWDIO DAP hardware I/O pin to output mode. This function is
 called prior \ref PIN_SWDIO_OUT function calls.
 */
 static inline void     PIN_SWDIO_OUT_ENABLE  (void) {
-
+  PIN_SWDIO_TMS_Reinit(1);
+  gpio_clr_mask(PICO_LINK_SWDIO_MASK);
 }
 
 /** SWDIO I/O pin: Switch to Input mode (used in SWD mode only).
@@ -395,7 +463,7 @@ Configure the SWDIO DAP hardware I/O pin to input mode. This function is
 called prior \ref PIN_SWDIO_IN function calls.
 */
 static inline void     PIN_SWDIO_OUT_DISABLE (void) {
-
+  PIN_SWDIO_TMS_Reinit(0);
 }
 
 
@@ -535,7 +603,12 @@ Status LEDs. In detail the operation of Hardware I/O and LED pins are enabled an
  - LED output pins are enabled and LEDs are turned off.
 */
 static inline void DAP_SETUP (void) {
+    /* Configure I/O pin SWCLK */
+  pin_out_init(PICO_LINK_SWCLK);
+  gpio_put(PICO_LINK_SWCLK, 1);
 
+  pin_out_init(PICO_LINK_SWDIO);
+  gpio_put(PICO_LINK_SWDIO, 1);
 }
 
 /** Reset Target Device with custom specific I/O pin or command sequence.
@@ -551,5 +624,8 @@ static inline unsigned char RESET_TARGET (void) {
 
 ///@}
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __DAP_CONFIG_H__ */

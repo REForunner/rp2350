@@ -6,8 +6,6 @@
 /* Standard includes. */
 #include <string.h>
 #include <stdio.h>
-#include <iostream>
-#include <algorithm>
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
