@@ -39,8 +39,15 @@ const HeapRegion_t xHeapRegions[] = {
 
 // stearm buffer used by cdc
 static StreamBufferHandle_t cdc_rx_streambuf[CFG_TUD_CDC];
+#if CFG_TUD_HID
 // stream buffer used by HID rx
 static StreamBufferHandle_t hid_rx_streambuf;
+#endif
+
+// task handle
+TaskHandle_t dap_taskhandle, tud_taskhandle;
+// pio swd interface
+probeInterface_t xprobeHandle = { .pio = PIO_INSTANCE(PROBE_SM), .pinBase = PROBE_PIN_OFFSET };  // defined in main/probe.c
 
 /*-----------------------------------------------------------*/
 
@@ -70,7 +77,7 @@ static const cli_t xCLIInterface =
 };
 
 /*-----------------------------------------------------------*/
-
+#if CFG_TUD_HID
 static int lDAP_Read(uint8_t * puc, int lMaxSize)
 {
     // receive data from steam-buffer
@@ -91,7 +98,7 @@ static const dap_t xDAP_Inf =
     .r = lDAP_Read,
     .w = lDAP_Write,
 };
-
+#endif
 /*-----------------------------------------------------------*/
 
 #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configUSE_TRACE_FACILITY == 1 ) )
@@ -188,9 +195,9 @@ int main(void)
     // Initialize heap5 and manage the defined memory areas
     // It must be called after the Initialise success is completed.
     vPortDefineHeapRegions(xHeapRegions);
-
+    
     // enable trace recorder
-    DAP_Setup();
+    
     /* Create that task that handles the console itself. */
     // xTaskCreate( vLCDTask, "lcd", 1024U, (void *)&xLCDdriver, 2, &xLCDHandle );
 
@@ -200,16 +207,20 @@ int main(void)
         cdc_rx_streambuf[i] = xStreamBufferCreate(CFG_TUD_CDC_RX_BUFSIZE, 1);
     }
     // usb thread
-    xTaskCreateAffinitySet(prvusbThread, "tud", 4096UL, NULL, 14, CORE_NUMBER(0), NULL);
+    xTaskCreateAffinitySet(prvusbThread, "tud", 4096UL, NULL, TUD_TASK_PRIO, CORE_NUMBER(0), &tud_taskhandle);
     // xTaskCreate(prvcdc, "cdc", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
-    
+#if CFG_TUD_HID
     // creat steam-buffer, used by hid rx
     hid_rx_streambuf = xStreamBufferCreate(CFG_TUD_HID_EP_BUFSIZE, 1);
     // daplink thread
     xTaskCreate(vdapTask, "dap", 512, (void *)&xDAP_Inf, 5, NULL);
-
+#endif
+    // dap setup
+    DAP_Setup();
+    /* Lowest priority thread is debug - need to shuffle buffers before we can toggle swd... */
+    xTaskCreateAffinitySet(dap_thread, "DAP", 4096UL, NULL, DAP_TASK_PRIO, CORE_NUMBER(1), &dap_taskhandle);
     // Create the command line task
-    xCLIStart( (void * const)&xCLIInterface, NULL, 3 );
+    xCLIStart( (void * const)&xCLIInterface, NULL, 1 );
     
     // Start FreeRTOS scheduler
     vTaskStartScheduler();
@@ -258,7 +269,7 @@ void tud_resume_cb(void)
 //--------------------------------------------------------------------+
 // USB HID
 //--------------------------------------------------------------------+
-
+#if CFG_TUD_HID
 /* Invoked when received GET_REPORT control request
  * Application must fill buffer report's content and return its length.
  * Return zero will cause the stack to STALL request
@@ -284,3 +295,44 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
     uint32_t response_size = TU_MIN(CFG_TUD_HID_EP_BUFSIZE, bufsize);
     xStreamBufferSend(hid_rx_streambuf, buffer, response_size, 0);
 }
+#endif
+
+//--------------------------------------------------------------------+
+// USB VENDOR
+//--------------------------------------------------------------------+
+#if CFG_TUD_VENDOR
+extern uint8_t const desc_ms_os_20[];
+
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request)
+{
+  // nothing to with DATA & ACK stage
+  if (stage != CONTROL_STAGE_SETUP) return true;
+
+  switch (request->bmRequestType_bit.type)
+  {
+    case TUSB_REQ_TYPE_VENDOR:
+      switch (request->bRequest)
+      {
+        case 1:
+          if ( request->wIndex == 7 )
+          {
+            // Get Microsoft OS 2.0 compatible descriptor
+            uint16_t total_len;
+            memcpy(&total_len, desc_ms_os_20 + 8, 2);
+
+            return tud_control_xfer(rhport, request, (void*) desc_ms_os_20, total_len);
+          }else
+          {
+            return false;
+          }
+
+        default: break;
+      }
+    break;
+    default: break;
+  }
+
+  // stall unknown request
+  return false;
+}
+#endif

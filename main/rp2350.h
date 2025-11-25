@@ -25,7 +25,8 @@
 #include <tusb.h>
 #include "pico/multicore.h"
 #include "stream_buffer.h"
-#include "dap/dapTask.h"
+#include "dap/DAP_config.h"
+#include "dap/DAP.h"
 
 
 #ifdef __cplusplus
@@ -44,10 +45,57 @@ extern "C" {
     typedef char __attribute__((unused)) UNIQUE_STATIC_ASSERT_ID[(COND) ? 1 : -1]
 #endif // (__STDC_VERSION__ >= 201112L)
 
+#ifndef USE_PROBE
+#define USE_PROBE   0
+#endif
+
+#if USE_PROBE
+#define probe_info(format,args...) \
+do { \
+	vTaskSuspendAll(); \
+	printf(format, ## args); \
+	xTaskResumeAll(); \
+} while (0)
+#else
+#define probe_info(format,...) ((void)0)
+#endif
+
+#if USE_PROBE
+#define probe_debug(format,args...) \
+do { \
+	vTaskSuspendAll(); \
+	printf(format, ## args); \
+	xTaskResumeAll(); \
+} while (0)
+#else
+#define probe_debug(format,...) ((void)0)
+#endif
+
+#if USE_PROBE
+#define probe_dump(format,args...)\
+do { \
+	vTaskSuspendAll(); \
+	printf(format, ## args); \
+	xTaskResumeAll(); \
+} while (0)
+#else
+#define probe_dump(format,...) ((void)0)
+#endif
+
+/* some task priority */
+#define TUD_TASK_PRIO  (configMAX_PRIORITIES - 2)
+#define DAP_TASK_PRIO  (tskIDLE_PRIORITY + 2)
+
 
 /* swd pin */
-#define SWCLK_PIN   23
-#define SWDIO_PIN   22
+#define SWCLK_PIN   22
+#define SWDIO_PIN   23
+// swdio interface config
+// PIO config
+#define PROBE_SM 			0
+// set swd pin base
+#define PROBE_PIN_OFFSET 	SWCLK_PIN	// swclk = pinBase + 0;	swdio = pinBase + 1
+
 
 /* lcd default display direction */
 #define SCREEN_DISPLAY_DIR_DEF      Horizontal
@@ -142,6 +190,10 @@ extern const HeapRegion_t xHeapRegions[];
 extern TaskHandle_t xLCDHandle;
 // lcd driver
 extern struct lcd_t xLCDdriver;
+// task handle
+extern TaskHandle_t dap_taskhandle, tud_taskhandle;
+// dap thread
+extern void dap_thread(void *ptr);
 
 
 #ifdef __cplusplus

@@ -25,9 +25,12 @@
  *
  *---------------------------------------------------------------------------*/
 
+
+
 #include "DAP_config.h"
 #include "DAP.h"
 
+#if (USE_PIO_SWD != 0)
 
 // SW Macros
 
@@ -284,3 +287,5 @@ uint8_t  SWD_Transfer(unsigned int request, unsigned int *data) {
 
 
 #endif  /* (DAP_SWD != 0) */
+
+#endif  /* USE_PIO_SWD != 0 */

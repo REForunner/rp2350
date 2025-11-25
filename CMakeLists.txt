@@ -105,6 +105,9 @@ pico_set_program_version(rp2350 "0.1")
 # Optional: Configure driver parameters before adding subdirectory
 set(CPU_RUN_TIME_BASE_US 500)          # Task running time statistics time-base[us] (default: 500)
 
+# use pio swd
+set(USE_PIO_SWD 1)                     # if 0: pio swd; if 1: cpu bit-bang
+
 # add subdirectory.
 add_subdirectory(main)                      # main
 add_subdirectory(app)                       # applocation

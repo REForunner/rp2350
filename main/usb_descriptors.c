@@ -6,6 +6,7 @@
 
 #include <tusb.h>
 #include "serial.h"
+#include "dap/DAP_config.h"
 #include "dap/DAP.h"
 
 // set some example Vendor and Product ID
@@ -15,7 +16,7 @@
 // use _PID_MAP to generate unique PID for each interface
 #define CDC_EXAMPLE_PID     ( 0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )
 // set USB 2.0
-#define CDC_EXAMPLE_BCD     0x0200
+#define CDC_EXAMPLE_BCD     0x0210
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -50,7 +51,7 @@ uint8_t const *tud_descriptor_device_cb(void);
 //--------------------------------------------------------------------+
 // HID Report Descriptor
 //--------------------------------------------------------------------+
-
+#if CFG_TUD_HID
 uint8_t const desc_hid_report[] = {
         TUD_HID_REPORT_DESC_GENERIC_INOUT(CFG_TUD_HID_EP_BUFSIZE)
 };
@@ -62,7 +63,7 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance) {
     (void) instance;
     return desc_hid_report;
 }
-
+#endif
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
@@ -75,20 +76,33 @@ enum {
     STRID_SERIAL,       // 3: Serials
     STRID_CDC_0,        // 4: CDC Interface 0
     STRID_CDC_1,        // 5: CDC Interface 1
+#if CFG_TUD_HID
     STRID_HID,          // 6: HID Interface
+#else
+    STRID_VENDOR,       // 6: Vendor Interface
+#endif
 };
 
 enum {
-    ITF_NUM_CDC_0 = 0,
+#if CFG_TUD_HID
+    ITF_NUM_HID = 0,
+#else
+    TIF_NUM_VENDOR = 0, // Old versions of Keil MDK only look at interface 0 ???
+#endif
+    ITF_NUM_CDC_0,
     ITF_NUM_CDC_0_DATA,
     ITF_NUM_CDC_1,
     ITF_NUM_CDC_1_DATA,
-    ITF_NUM_HID,
     ITF_NUM_TOTAL
 };
 
+#if CFG_TUD_HID
 // total length of configuration descriptor
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN + TUD_HID_INOUT_DESC_LEN )
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
+#else
+// total length of configuration descriptor
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN + TUD_VENDOR_DESC_LEN)
+#endif
 
 // define endpoint numbers
 #define EPNUM_CDC_0_NOTIF   0x81 // notification endpoint for CDC 0
@@ -99,13 +113,21 @@ enum {
 #define EPNUM_CDC_1_OUT     0x05 // out endpoint for CDC 1
 #define EPNUM_CDC_1_IN      0x85 // in endpoint for CDC 1
 
-#define EPNUM_HID_OUT       0x86
-#define EPNUM_HID_IN        0x06
+#define EPNUM_HID_OUT       0x06
+#define EPNUM_HID_IN        0x86
 
 // configure descriptor (for 2 CDC interfaces)
 uint8_t const desc_configuration[] = {
     // config descriptor | how much power in mA, count of interfaces, ...
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, STRID_LANGID, CONFIG_TOTAL_LEN, 0x80, 100),
+
+#if CFG_TUD_HID
+    // HID Interface
+    // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
+    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, STRID_HID, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID_IN, EPNUM_HID_OUT, CFG_TUD_HID_EP_BUFSIZE, 1),
+#else
+    TUD_VENDOR_DESCRIPTOR(TIF_NUM_VENDOR, STRID_VENDOR, EPNUM_HID_OUT, EPNUM_HID_IN, 64),
+#endif
 
     // CDC 0: Communication Interface - TODO: get 64 from tusb_config.h
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, STRID_CDC_0, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
@@ -116,10 +138,6 @@ uint8_t const desc_configuration[] = {
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, STRID_CDC_1, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
     // CDC 1: Data Interface
     //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1_DATA, 4, 0x03, 0x04),
-
-    // HID Interface
-    // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, STRID_HID, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID_IN, EPNUM_HID_OUT, CFG_TUD_HID_EP_BUFSIZE, 1),
 };
 
 // called when host requests to get configuration descriptor
@@ -152,7 +170,11 @@ char const *string_desc_arr[] = {
     NULL,                           // 3: Serials (null so it uses unique ID if available)
     "Pico SDK stdio",               // 4: CDC Interface 0
     "Custom CDC",                   // 5: CDC Interface 1
+#if CFG_TUD_HID
     "#HID CMSIS-DAP v" DAP_FW_VER,  // 6: HID Interface
+#else
+    "#WinUSB CMSIS-DAP v" DAP_FW_VER, // 6: Interface descriptor for Bulk transport
+#endif
     "RPiReset"                      // 7: Reset Interface
 };
 
@@ -232,4 +254,70 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     _desc_str[0] = (uint16_t) ((TUSB_DESC_STRING << 8) | (char_count * 2 + 2));
 
     return _desc_str;
+}
+
+/* [incoherent gibbering to make Windows happy] */
+
+//--------------------------------------------------------------------+
+// BOS Descriptor
+//--------------------------------------------------------------------+
+
+/* Microsoft OS 2.0 registry property descriptor
+Per MS requirements https://msdn.microsoft.com/en-us/library/windows/hardware/hh450799(v=vs.85).aspx
+device should create DeviceInterfaceGUIDs. It can be done by driver and
+in case of real PnP solution device should expose MS "Microsoft OS 2.0
+registry property descriptor". Such descriptor can insert any record
+into Windows registry per device/configuration/interface. In our case it
+will insert "DeviceInterfaceGUIDs" multistring property.
+
+
+https://developers.google.com/web/fundamentals/native-hardware/build-for-webusb/
+(Section Microsoft OS compatibility descriptors)
+*/
+#define MS_OS_20_DESC_LEN  0xB2
+
+#define BOS_TOTAL_LEN      (TUD_BOS_DESC_LEN + TUD_BOS_MICROSOFT_OS_DESC_LEN)
+
+uint8_t const desc_bos[] =
+{
+  // total length, number of device caps
+  TUD_BOS_DESCRIPTOR(BOS_TOTAL_LEN, 1),
+
+  // Microsoft OS 2.0 descriptor
+  TUD_BOS_MS_OS_20_DESCRIPTOR(MS_OS_20_DESC_LEN, 1)
+};
+
+uint8_t const desc_ms_os_20[] =
+{
+  // Set header: length, type, windows version, total length
+  U16_TO_U8S_LE(0x000A), U16_TO_U8S_LE(MS_OS_20_SET_HEADER_DESCRIPTOR), U32_TO_U8S_LE(0x06030000), U16_TO_U8S_LE(MS_OS_20_DESC_LEN),
+
+  // Configuration subset header: length, type, configuration index, reserved, configuration total length
+  U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_CONFIGURATION), 0, 0, U16_TO_U8S_LE(MS_OS_20_DESC_LEN-0x0A),
+
+  // Function Subset header: length, type, first interface, reserved, subset length
+  U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_FUNCTION), TIF_NUM_VENDOR, 0, U16_TO_U8S_LE(MS_OS_20_DESC_LEN-0x0A-0x08),
+
+  // MS OS 2.0 Compatible ID descriptor: length, type, compatible ID, sub compatible ID
+  U16_TO_U8S_LE(0x0014), U16_TO_U8S_LE(MS_OS_20_FEATURE_COMPATBLE_ID), 'W', 'I', 'N', 'U', 'S', 'B', 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // sub-compatible
+
+  // MS OS 2.0 Registry property descriptor: length, type
+  U16_TO_U8S_LE(MS_OS_20_DESC_LEN-0x0A-0x08-0x08-0x14), U16_TO_U8S_LE(MS_OS_20_FEATURE_REG_PROPERTY),
+  U16_TO_U8S_LE(0x0007), U16_TO_U8S_LE(0x002A), // wPropertyDataType, wPropertyNameLength and PropertyName "DeviceInterfaceGUIDs\0" in UTF-16
+  'D', 0x00, 'e', 0x00, 'v', 0x00, 'i', 0x00, 'c', 0x00, 'e', 0x00, 'I', 0x00, 'n', 0x00, 't', 0x00, 'e', 0x00,
+  'r', 0x00, 'f', 0x00, 'a', 0x00, 'c', 0x00, 'e', 0x00, 'G', 0x00, 'U', 0x00, 'I', 0x00, 'D', 0x00, 's', 0x00, 0x00, 0x00,
+  U16_TO_U8S_LE(0x0050), // wPropertyDataLength
+  // bPropertyData "{CDB3B5AD-293B-4663-AA36-1AAE46463776}" as a UTF-16 string (b doesn't mean bytes)
+  '{', 0x00, 'C', 0x00, 'D', 0x00, 'B', 0x00, '3', 0x00, 'B', 0x00, '5', 0x00, 'A', 0x00, 'D', 0x00, '-', 0x00,
+  '2', 0x00, '9', 0x00, '3', 0x00, 'B', 0x00, '-', 0x00, '4', 0x00, '6', 0x00, '6', 0x00, '3', 0x00, '-', 0x00,
+  'A', 0x00, 'A', 0x00, '3', 0x00, '6', 0x00, '-', 0x00, '1', 0x00, 'A', 0x00, 'A', 0x00, 'E', 0x00, '4', 0x00,
+  '6', 0x00, '4', 0x00, '6', 0x00, '3', 0x00, '7', 0x00, '7', 0x00, '6', 0x00, '}', 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+TU_VERIFY_STATIC(sizeof(desc_ms_os_20) == MS_OS_20_DESC_LEN, "Incorrect size");
+
+uint8_t const * tud_descriptor_bos_cb(void)
+{
+  return desc_bos;
 }

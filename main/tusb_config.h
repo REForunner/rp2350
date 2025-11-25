@@ -25,12 +25,12 @@
 //------------------------
 
 // Enable HID
-#define CFG_TUD_HID             (1)
+#define CFG_TUD_HID             (0)
 
 #define CFG_TUD_HID_EP_BUFSIZE  (64)
 
 // Enable vendr
-#define CFG_TUD_VENDOR          (0)
+#define CFG_TUD_VENDOR          (1)
 
 // Enable 2 CDC classes
 #define CFG_TUD_CDC             (2)

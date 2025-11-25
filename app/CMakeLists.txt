@@ -24,4 +24,4 @@ endif()
 
 target_include_directories(app INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(app INTERFACE pico_stdlib freertos)
+target_link_libraries(app INTERFACE pico_stdlib freertos hardware_pio hardware_dma hardware_clocks main)

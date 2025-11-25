@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#if CFG_TUD_HID
+
 /*-----------------------------------------------------------*/
 
 /* dap task buffer size */
@@ -41,6 +43,8 @@ typedef struct dap_t
 void vdapTask(void * pv);
 
 /*-----------------------------------------------------------*/
+
+#endif
 
 #endif  /* DAP_TASK_H_ */
 
