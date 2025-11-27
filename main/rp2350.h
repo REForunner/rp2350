@@ -83,13 +83,13 @@ do { \
 #endif
 
 /* some task priority */
-#define TUD_TASK_PRIO  (configMAX_PRIORITIES - 2)
-#define DAP_TASK_PRIO  (tskIDLE_PRIORITY + 2)
-
+#define TUD_TASK_PRIO  	(tskIDLE_PRIORITY + 3)
+#define DAP_TASK_PRIO  	(tskIDLE_PRIORITY + 2)
+#define CLI_TASK_PRIO	(tskIDLE_PRIORITY + 2)
 
 /* swd pin */
-#define SWCLK_PIN   22
-#define SWDIO_PIN   23
+// #define SWCLK_PIN   22	// in top cmakelists.txt
+// #define SWDIO_PIN   23
 // swdio interface config
 // PIO config
 #define PROBE_SM 			0
@@ -194,6 +194,8 @@ extern struct lcd_t xLCDdriver;
 extern TaskHandle_t dap_taskhandle, tud_taskhandle;
 // dap thread
 extern void dap_thread(void *ptr);
+// stearm buffer used by dap thread
+extern StreamBufferHandle_t dapStreambuf;
 
 
 #ifdef __cplusplus

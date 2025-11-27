@@ -28,7 +28,7 @@
 #include <string.h>
 #include "DAP_config.h"
 #include "DAP.h"
-
+#include "rp2350.h"
 
 #if (DAP_PACKET_SIZE < 64U)
 #error "Minimum Packet Size is 64!"
@@ -62,8 +62,9 @@ static void Set_Clock_Delay(unsigned int clock) {
   unsigned int delay;
 
   if (clock >= MAX_SWJ_CLOCK(DELAY_FAST_CYCLES)) {
-    DAP_Data.fast_clock  = 1U;
-    DAP_Data.clock_delay = 1U;
+    // 150MHz the max speed is 10MHz!!!
+    DAP_Data.fast_clock  = 2U;
+    DAP_Data.clock_delay = 2U;
   } else {
     DAP_Data.fast_clock  = 0U;
 
@@ -1648,7 +1649,7 @@ unsigned int DAP_ProcessCommand(const uint8_t *request, uint8_t *response) {
   }
 
   *response++ = *request;
-
+  
   switch (*request++) {
     case ID_DAP_Info:
       num = DAP_Info(*request, response+1);

@@ -31,6 +31,8 @@
 #include "hardware/pio.h"
 #include "rp2350.h"
 
+#if (USE_PIO_SWD == 0)
+
 /* Slight hack - we're not bitbashing so we need to set baudrate off the DAP's delay cycles.
  * Ideally we don't want calls to udiv everywhere... */
 #define MAKE_KHZ(x) (CPU_CLOCK / (2000 * ((x) + 1)))
@@ -49,7 +51,6 @@ void SWJ_Sequence (unsigned int count, const uint8_t *data) {
     probe_set_swclk_freq(xprobeHandle.pio, xprobeHandle.sm, MAKE_KHZ(DAP_Data.clock_delay));
     cached_delay = DAP_Data.clock_delay;
   }
-  probe_debug("SWJ sequence count = %d FDB=0x%2x\n", count, data[0]);
   n = count;
   while (n > 0) {
     if (n > 8)
@@ -208,5 +209,7 @@ uint8_t SWD_Transfer (unsigned int request, unsigned int *data) {
   probe_read_bits(xprobeHandle.pio, xprobeHandle.sm, n);
   return ((uint8_t)ack);
 }
+
+#endif
 
 #endif  /* (DAP_SWD != 0) */

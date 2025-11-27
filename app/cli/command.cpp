@@ -260,16 +260,14 @@ static BaseType_t prvStartStopTraceCommand( char * pcWriteBuffer,
         // vTraceStop();
         // vTraceClear();
         // vTraceStart();
-        LCD_BL_PIN_ON();
-
+     
         ( void ) snprintf( pcWriteBuffer, xWriteBufferLen, "Trace recording (re)started.\r\n" );
     }
     else if( strncmp( pcParameter, "stop", strlen( "stop" ) ) == 0 )
     {
         /* End the trace, if one is running. */
         // vTraceStop();
-        LCD_BL_PIN_OFF();
-
+        
         ( void ) snprintf( pcWriteBuffer, xWriteBufferLen, "Stopping trace recording.\r\n" );
     }
     else if( strncmp( pcParameter, "status", strlen( "status" ) ) == 0 )

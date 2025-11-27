@@ -71,11 +71,12 @@
 /* System */
 #define configSTACK_DEPTH_TYPE                  uint32_t
 #define configMESSAGE_BUFFER_LENGTH_TYPE        size_t
+#define configRECORD_STACK_HIGH_ADDRESS         1
 
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         1  // Set to 1
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (256 * 1024)
+#define configTOTAL_HEAP_SIZE                   (128 * 1024)
 #define configAPPLICATION_ALLOCATED_HEAP        1
 #define configENABLE_HEAP_PROTECTOR             1
 

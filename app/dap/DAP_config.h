@@ -96,7 +96,7 @@ This information includes:
 /// This configuration settings is used to optimize the communication performance with the
 /// debugger and depends on the USB peripheral. For devices with limited RAM or USB buffer the
 /// setting can be reduced (valid range is 1 .. 255).
-#define DAP_PACKET_COUNT        2U              ///< Specifies number of packets buffered.
+#define DAP_PACKET_COUNT        1U              ///< Specifies number of packets buffered.
 
 /// Indicate that UART Serial Wire Output (SWO) trace is available.
 /// This information is returned by the command \ref DAP_Info as part of <b>Capabilities</b>.
@@ -292,9 +292,6 @@ __STATIC_INLINE void pin_in_init(uint gpio, uint8_t mode) {
     gpio_set_dir(gpio, GPIO_IN);
 }
 
-#define PICO_LINK_SWCLK 24
-#define PICO_LINK_SWDIO 22
-
 #define PICO_LINK_SWCLK_MASK (1ul << PICO_LINK_SWCLK)
 #define PICO_LINK_SWDIO_MASK (1ul << PICO_LINK_SWDIO)
 
@@ -362,7 +359,6 @@ static inline void PORT_SWD_SETUP (void) {
     gpio_put(PICO_LINK_SWDIO, 1);
 #else
     extern volatile uint32_t cached_delay;
-    probe_init(xprobeHandle.pio, &xprobeHandle.sm, xprobeHandle.pinBase);
     cached_delay = 0;
 #endif
 }
@@ -376,7 +372,8 @@ static inline void PORT_OFF (void) {
     pin_in_init(PICO_LINK_SWDIO, 0);
     pin_in_init(PICO_LINK_SWCLK, 0);
 #else
-    probe_deinit(xprobeHandle.pio, xprobeHandle.sm, xprobeHandle.pinBase);
+    probe_read_mode(xprobeHandle.pio, xprobeHandle.sm);
+    // probe_deinit(xprobeHandle.pio, xprobeHandle.sm, xprobeHandle.pinBase);
 #endif
 }
 
@@ -656,6 +653,10 @@ static inline void DAP_SETUP (void) {
 
   pin_out_init(PICO_LINK_SWDIO);
   gpio_put(PICO_LINK_SWDIO, 1);
+#else
+  extern volatile uint32_t cached_delay;
+  cached_delay = 0;
+  probe_init(xprobeHandle.pio, &xprobeHandle.sm, xprobeHandle.pinBase);
 #endif
 }
 

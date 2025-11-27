@@ -7,9 +7,7 @@
 /// @brief dap link thread
 /// @param pv : dap task interface
 void vdapTask(void * pv)
-{
-    DAP_Setup();
-    
+{   
     dap_t * px = (dap_t *)pv;
 
     uint8_t rx[DAP_BUFFER_SIZE] = { 0 };

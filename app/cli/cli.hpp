@@ -21,7 +21,7 @@
 /* command task name */
 #define CLI_TASK_NAME           "cli"
 /* command task stack size(32-bit word) */
-#define CLI_TASK_STACK_SIZE     3072U
+#define CLI_TASK_STACK_SIZE     512U
 
 /*-----------------------------------------------------------*/
 

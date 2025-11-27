@@ -22,6 +22,8 @@ if(HEAD_FILES)
 	target_sources(app INTERFACE ${HEAD_FILES})
 endif()
 
+target_compile_definitions(app INTERFACE USE_PIO_SWD=${USE_PIO_SWD} PICO_LINK_SWDIO=${SWDIO_PIN} PICO_LINK_SWCLK=${SWCLK_PIN})
+
 target_include_directories(app INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
 target_link_libraries(app INTERFACE pico_stdlib freertos hardware_pio hardware_dma hardware_clocks main)

@@ -29,6 +29,8 @@
 
 #include "DAP_config.h"
 #include "DAP.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 #if (USE_PIO_SWD != 0)
 
@@ -66,6 +68,7 @@
 //   return: none
 #if ((DAP_SWD != 0) || (DAP_JTAG != 0))
 void SWJ_Sequence (unsigned int count, const uint8_t *data) {
+  taskENTER_CRITICAL();
   unsigned int val;
   unsigned int n;
 
@@ -85,6 +88,7 @@ void SWJ_Sequence (unsigned int count, const uint8_t *data) {
     val >>= 1;
     n--;
   }
+  taskEXIT_CRITICAL();
 }
 #endif
 
@@ -96,6 +100,7 @@ void SWJ_Sequence (unsigned int count, const uint8_t *data) {
 //   return: none
 #if (DAP_SWD != 0)
 void SWD_Sequence (unsigned int info, const uint8_t *swdo, uint8_t *swdi) {
+  taskENTER_CRITICAL();
   unsigned int val;
   unsigned int bit;
   unsigned int n, k;
@@ -125,6 +130,7 @@ void SWD_Sequence (unsigned int info, const uint8_t *swdo, uint8_t *swdi) {
       }
     }
   }
+  taskEXIT_CRITICAL();
 }
 #endif
 
@@ -137,7 +143,8 @@ void SWD_Sequence (unsigned int info, const uint8_t *swdo, uint8_t *swdi) {
 //   data:    DATA[31:0]
 //   return:  ACK[2:0]
 #define SWD_TransferFunction(speed)     /**/                                    \
-static uint8_t SWD_Transfer##speed (unsigned int request, unsigned int *data) {         \
+static uint8_t SWD_Transfer##speed (unsigned int request, unsigned int *data) {\
+  taskENTER_CRITICAL();         \
   unsigned int ack;                                                                 \
   unsigned int bit;                                                                 \
   unsigned int val;                                                                 \
@@ -229,6 +236,7 @@ static uint8_t SWD_Transfer##speed (unsigned int request, unsigned int *data) { 
       }                                                                         \
     }                                                                           \
     PIN_SWDIO_OUT(1U);                                                          \
+    taskEXIT_CRITICAL();                                                        \
     return ((uint8_t)ack);                                                      \
   }                                                                             \
                                                                                 \
@@ -251,6 +259,7 @@ static uint8_t SWD_Transfer##speed (unsigned int request, unsigned int *data) { 
       }                                                                         \
     }                                                                           \
     PIN_SWDIO_OUT(1U);                                                          \
+    taskEXIT_CRITICAL();                                                        \
     return ((uint8_t)ack);                                                      \
   }                                                                             \
                                                                                 \
@@ -260,6 +269,7 @@ static uint8_t SWD_Transfer##speed (unsigned int request, unsigned int *data) { 
   }                                                                             \
   PIN_SWDIO_OUT_ENABLE();                                                       \
   PIN_SWDIO_OUT(1U);                                                            \
+  taskEXIT_CRITICAL();                                                          \
   return ((uint8_t)ack);                                                        \
 }
 

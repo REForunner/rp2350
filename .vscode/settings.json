@@ -112,5 +112,6 @@
         "variant": "cpp",
         "serial.h": "c",
         "freertos_cli.h": "c"
-    }
+    },
+    "cortex-debug.variableUseNaturalFormat": true
 }

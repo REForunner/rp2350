@@ -16,8 +16,13 @@
 // use _PID_MAP to generate unique PID for each interface
 #define CDC_EXAMPLE_PID     ( 0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )
 // set USB 2.0
-#define CDC_EXAMPLE_BCD     0x0210
-
+#if CFG_TUD_HID
+    #define CDC_EXAMPLE_BCD     0x0200
+#endif
+// set USB 2.1
+#if CFG_TUD_VENDOR
+    #define CDC_EXAMPLE_BCD     0x0210
+#endif
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
@@ -74,8 +79,12 @@ enum {
     STRID_MANUFACTURER, // 1: Manufacturer
     STRID_PRODUCT,      // 2: Product
     STRID_SERIAL,       // 3: Serials
+#if (CFG_TUD_CDC == 1)
+    STRID_CDC_0,        // 4: CDC Interface 0
+#elif (CFG_TUD_CDC == 2)
     STRID_CDC_0,        // 4: CDC Interface 0
     STRID_CDC_1,        // 5: CDC Interface 1
+#endif
 #if CFG_TUD_HID
     STRID_HID,          // 6: HID Interface
 #else
@@ -89,10 +98,15 @@ enum {
 #else
     TIF_NUM_VENDOR = 0, // Old versions of Keil MDK only look at interface 0 ???
 #endif
+#if (CFG_TUD_CDC == 1)
+    ITF_NUM_CDC_0,
+    ITF_NUM_CDC_0_DATA,
+#elif (CFG_TUD_CDC == 2)
     ITF_NUM_CDC_0,
     ITF_NUM_CDC_0_DATA,
     ITF_NUM_CDC_1,
     ITF_NUM_CDC_1_DATA,
+#endif
     ITF_NUM_TOTAL
 };
 
@@ -105,16 +119,24 @@ enum {
 #endif
 
 // define endpoint numbers
-#define EPNUM_CDC_0_NOTIF   0x81 // notification endpoint for CDC 0
-#define EPNUM_CDC_0_OUT     0x02 // out endpoint for CDC 0
-#define EPNUM_CDC_0_IN      0x82 // in endpoint for CDC 0
+#if (CFG_TUD_CDC == 1)
+    #define EPNUM_CDC_0_NOTIF   0x81 // notification endpoint for CDC 0
+    #define EPNUM_CDC_0_OUT     0x02 // out endpoint for CDC 0
+    #define EPNUM_CDC_0_IN      0x82 // in endpoint for CDC 0
+#elif (CFG_TUD_CDC == 2)
+    #define EPNUM_CDC_0_NOTIF   0x81 // notification endpoint for CDC 0
+    #define EPNUM_CDC_0_OUT     0x02 // out endpoint for CDC 0
+    #define EPNUM_CDC_0_IN      0x82 // in endpoint for CDC 0
 
-#define EPNUM_CDC_1_NOTIF   0x84 // notification endpoint for CDC 1
-#define EPNUM_CDC_1_OUT     0x05 // out endpoint for CDC 1
-#define EPNUM_CDC_1_IN      0x85 // in endpoint for CDC 1
+    #define EPNUM_CDC_1_NOTIF   0x84 // notification endpoint for CDC 1
+    #define EPNUM_CDC_1_OUT     0x05 // out endpoint for CDC 1
+    #define EPNUM_CDC_1_IN      0x85 // in endpoint for CDC 1
+#endif
 
-#define EPNUM_HID_OUT       0x06
-#define EPNUM_HID_IN        0x86
+#if (CFG_TUD_HID || CFG_TUD_VENDOR)
+    #define EPNUM_HID_OUT       0x06
+    #define EPNUM_HID_IN        0x86
+#endif
 
 // configure descriptor (for 2 CDC interfaces)
 uint8_t const desc_configuration[] = {
@@ -128,7 +150,12 @@ uint8_t const desc_configuration[] = {
 #else
     TUD_VENDOR_DESCRIPTOR(TIF_NUM_VENDOR, STRID_VENDOR, EPNUM_HID_OUT, EPNUM_HID_IN, 64),
 #endif
-
+#if (CFG_TUD_CDC == 1)
+    // CDC 0: Communication Interface - TODO: get 64 from tusb_config.h
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, STRID_CDC_0, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+    // CDC 0: Data Interface
+    //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0_DATA, 4, 0x01, 0x02),
+#elif (CFG_TUD_CDC == 2)
     // CDC 0: Communication Interface - TODO: get 64 from tusb_config.h
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, STRID_CDC_0, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
     // CDC 0: Data Interface
@@ -138,6 +165,7 @@ uint8_t const desc_configuration[] = {
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, STRID_CDC_1, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
     // CDC 1: Data Interface
     //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1_DATA, 4, 0x03, 0x04),
+#endif
 };
 
 // called when host requests to get configuration descriptor
@@ -168,8 +196,12 @@ char const *string_desc_arr[] = {
     "Raspberry Pi",                 // 1: Manufacturer
     "Pico (2)",                     // 2: Product
     NULL,                           // 3: Serials (null so it uses unique ID if available)
+#if (CFG_TUD_CDC == 1)
+    "Pico SDK stdio",               // 4: CDC Interface 0
+#elif (CFG_TUD_CDC == 2)
     "Pico SDK stdio",               // 4: CDC Interface 0
     "Custom CDC",                   // 5: CDC Interface 1
+#endif
 #if CFG_TUD_HID
     "#HID CMSIS-DAP v" DAP_FW_VER,  // 6: HID Interface
 #else
@@ -296,7 +328,7 @@ uint8_t const desc_ms_os_20[] =
   U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_CONFIGURATION), 0, 0, U16_TO_U8S_LE(MS_OS_20_DESC_LEN-0x0A),
 
   // Function Subset header: length, type, first interface, reserved, subset length
-  U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_FUNCTION), TIF_NUM_VENDOR, 0, U16_TO_U8S_LE(MS_OS_20_DESC_LEN-0x0A-0x08),
+  U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_FUNCTION), 0/*TIF_NUM_VENDOR*/, 0, U16_TO_U8S_LE(MS_OS_20_DESC_LEN-0x0A-0x08),
 
   // MS OS 2.0 Compatible ID descriptor: length, type, compatible ID, sub compatible ID
   U16_TO_U8S_LE(0x0014), U16_TO_U8S_LE(MS_OS_20_FEATURE_COMPATBLE_ID), 'W', 'I', 'N', 'U', 'S', 'B', 0x00, 0x00,
@@ -321,3 +353,47 @@ uint8_t const * tud_descriptor_bos_cb(void)
 {
   return desc_bos;
 }
+
+//--------------------------------------------------------------------+
+// USB VENDOR
+//--------------------------------------------------------------------+
+#if CFG_TUD_VENDOR
+
+#define VENDOR_REQUEST_MICROSOFT    1
+
+extern uint8_t const desc_ms_os_20[];
+
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request)
+{
+  // nothing to with DATA & ACK stage
+  if (stage != CONTROL_STAGE_SETUP) return true;
+
+  switch (request->bmRequestType_bit.type)
+  {
+    case TUSB_REQ_TYPE_VENDOR:
+      switch (request->bRequest)
+      {
+        case VENDOR_REQUEST_MICROSOFT:
+          if ( request->wIndex == 7 )
+          {
+            // Get Microsoft OS 2.0 compatible descriptor
+            uint16_t total_len;
+            memcpy(&total_len, desc_ms_os_20 + 8, 2);
+
+            return tud_control_xfer(rhport, request, (void*) desc_ms_os_20, total_len);
+          }
+          else
+          {
+            return false;
+          }
+
+        default: break;
+      }
+    break;
+    default: break;
+  }
+
+  // stall unknown request
+  return false;
+}
+#endif

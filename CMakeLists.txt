@@ -73,6 +73,11 @@ endif()
 
 # set freertos path
 set(FREERTOS_KERNEL_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/FreeRTOS-Kernel CACHE PATH "")
+# set default binary type
+# default       ///< Stores binaries in flash storage. Runs binaries from flash storage.
+# no_flash      ///< Stores binaries in memory. Runs binaries from memory.
+# copy_to_ram   ///< Stores binaries in flash, but copies them to memory (RAM) before executing.
+set(PICO_DEFAULT_BINARY_TYPE "default")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -80,6 +85,7 @@ include(pico_sdk_import.cmake)
 project(rp2350 C CXX ASM)
 
 set(PICO_DEFAULT_LED_PIN 3)
+# set(LOG 2)
 # OPT_OS_NONE       1  ///< No RTOS
 # OPT_OS_FREERTOS   2  ///< FreeRTOS
 # OPT_OS_MYNEWT     3  ///< Mynewt OS
@@ -106,7 +112,9 @@ pico_set_program_version(rp2350 "0.1")
 set(CPU_RUN_TIME_BASE_US 500)          # Task running time statistics time-base[us] (default: 500)
 
 # use pio swd
-set(USE_PIO_SWD 1)                     # if 0: pio swd; if 1: cpu bit-bang
+set(USE_PIO_SWD 0)                     # if 0: pio swd; if 1: cpu bit-bang
+set(SWCLK_PIN   22)
+set(SWDIO_PIN   23)
 
 # add subdirectory.
 add_subdirectory(main)                      # main
@@ -117,7 +125,7 @@ add_subdirectory(components/bsp)            # board support package
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(rp2350 0)
-pico_enable_stdio_usb(rp2350 1)
+pico_enable_stdio_usb(rp2350 0)
 
 target_link_options(${PROJECT_NAME} PRIVATE
     -Wl,-Map=${PROJECT_NAME}.map
@@ -145,5 +153,7 @@ target_link_libraries(rp2350 PRIVATE
 target_include_directories(rp2350 PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
+
+pico_set_binary_type(rp2350 ${PICO_DEFAULT_BINARY_TYPE})
 
 pico_add_extra_outputs(rp2350)
